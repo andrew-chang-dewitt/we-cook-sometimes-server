@@ -5,3 +5,5 @@ dist/
 *.swo
 
 .nyc_output
+
+.env
