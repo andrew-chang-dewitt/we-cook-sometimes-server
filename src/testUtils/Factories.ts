@@ -92,6 +92,12 @@ class Card {
   }
 }
 
+class CardDetails {
+  static create(): Trello.CardDetails {
+    return { id: 'id', desc: 'a description' }
+  }
+}
+
 class Label {
   static createWithData(data: { id: string; name: string }): Trello.Label {
     return data as Trello.Label
@@ -139,7 +145,7 @@ class RecipeCard {
 
 export default {
   schema: {
-    Trello: { Label, Attachment, Card },
+    Trello: { Label, Attachment, Card, CardDetails },
     Data: { Tag, RecipeCard },
   },
 }
