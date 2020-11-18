@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "lint": "prettier --config .prettierrc.yaml --write './(*.html|*.js|*.json|src/**/*.ts)'",
-    "test": "mocha",
+    "test": "TS_NODE_FILES=true mocha 'src/**/*.spec.{ts,tsx}'",
     "test-one": "TS_NODE_FILES=true mocha $MATCH",
     "coverage": "nyc npm run test",
     "prebuild": "npm run lint && npm run coverage",
