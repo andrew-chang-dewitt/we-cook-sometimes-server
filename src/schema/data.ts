@@ -5,11 +5,18 @@ export interface Tag {
   color: string
 }
 
+export interface ScaledImage {
+  url: string
+  height: number
+  width: number
+}
+
 export interface Image {
   id: string
   edgeColor: string
   url: string
   name: string
+  scaled: Array<ScaledImage>
 }
 
 export interface RecipeCard {
@@ -17,7 +24,7 @@ export interface RecipeCard {
   name: string
   shortLink: string
   tags: Array<Tag>
-  idAttachmentCover: string | null
+  cover: Image
   idList: string
 }
 
