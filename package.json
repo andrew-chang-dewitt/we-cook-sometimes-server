@@ -6,6 +6,7 @@
   "scripts": {
     "lint": "prettier --config .prettierrc.yaml --write './(*.html|*.js|*.json|src/**/*.ts)'",
     "test": "mocha",
+    "test-one": "TS_NODE_FILES=true mocha $MATCH",
     "coverage": "nyc npm run test",
     "prebuild": "npm run lint && npm run coverage",
     "build": "tsc",
@@ -36,9 +37,6 @@
     "extension": [
       "ts",
       "tsx"
-    ],
-    "spec": [
-      "src/**/*.spec.ts"
     ],
     "require": "ts-node/register"
   },
