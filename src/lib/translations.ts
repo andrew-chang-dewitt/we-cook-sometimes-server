@@ -17,16 +17,24 @@ export const buildImage = ({
   scaled: previews as Array<Data.ScaledImage>,
 })
 
+const isImage = (obj: Trello.Attachment | Data.Image): obj is Data.Image =>
+  obj.hasOwnProperty('scaled')
+
 export const buildRecipeCard = (
   { id, name, shortLink, labels, idList }: Trello.Card,
-  coverImage: Trello.Attachment
+  coverImage: Trello.Attachment | Data.Image
 ): Data.RecipeCard => ({
   id,
   name,
   shortLink,
   idList,
   tags: labels.map((label) => buildTag(label)),
-  cover: buildImage(coverImage),
+  cover:
+    coverImage !== null
+      ? isImage(coverImage)
+        ? coverImage
+        : buildImage(coverImage)
+      : null,
 })
 
 export const buildRecipeDetails = (
