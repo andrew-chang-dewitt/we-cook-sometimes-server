@@ -17,7 +17,8 @@
   "nyc": {
     "all": true,
     "reporter": [
-      "text"
+      "text",
+      "html"
     ],
     "check-coverage": true,
     "lines": 99,
