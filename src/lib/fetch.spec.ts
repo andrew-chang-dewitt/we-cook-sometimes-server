@@ -9,7 +9,7 @@ chai.use(chaiAsPromised)
 const expect = chai.expect
 
 import { Tag, Image } from '../schema/data'
-import { Card } from '../schema/trello'
+import { Card, Attachment } from '../schema/trello'
 import fetch, { FetchError } from './fetch'
 
 describe('lib/data/fetch', () => {
@@ -29,14 +29,21 @@ describe('lib/data/fetch', () => {
     server.close()
   })
 
-  it('encapsulates fetch errors from the Trello API in the Err Result type', async () => {
+  it('wraps fetch errors from the Trello API in the Err Result type', async () => {
     server.use(
       rest.get(root + board + '/cards', (_, res, ctx) => res(ctx.status(500)))
     )
 
-    const result = await fetch.recipes()
+    expect((await fetch.recipes()).unwrap).to.throw(/500/i)
+  })
 
-    expect(result.unwrap).to.throw(FetchError, /500/i)
+  it('tags() returns a list of labels for the board', async () => {
+    const labels = [('a label' as any) as Tag]
+    server.use(
+      rest.get(root + board + '/labels', (_, res, ctx) => res(ctx.json(labels)))
+    )
+
+    expect((await fetch.tags()).unwrap()).to.deep.equal(labels)
   })
 
   describe('image()', () => {
@@ -54,15 +61,10 @@ describe('lib/data/fetch', () => {
     it('returns an Image object for a given recipe & image ID', async () => {
       const result = await fetch.image('1', '1')
 
-      expect(result.unwrap()).to.deep.equal({
-        url: 'url',
-        id: imgObj.id,
-        name: 'a name',
-        edgeColor: imgObj.edgeColor,
-      })
+      expect(result.unwrap().name).to.equal('a name')
     })
 
-    it("returns Result-wrapped FetchError if isn't marked [published]", async () => {
+    it("returns an Error if isn't marked [published]", async () => {
       const img = {
         ...imgObj,
         name: 'not published',
@@ -76,83 +78,30 @@ describe('lib/data/fetch', () => {
 
       const result = await fetch.image('1', '1')
 
-      expect(result.unwrap).to.throw(FetchError, /not.*published/i)
+      expect(result.unwrap).to.throw(/not.*published/i)
     })
 
-    // it('identifies unknown errors thrown while checking image', async () => {
-    //   const img = {
-    //     id: 'missing information',
-    //   } as ImageAPI
+    it('identifies unknown errors thrown while checking image', async () => {
+      const img = {
+        id: 'missing information',
+      } as Attachment
 
-    //   server.use(
-    //     rest.get(root + '/card/1/attachments/1', (_, res, ctx) =>
-    //       res(ctx.json(img))
-    //     )
-    //   )
-
-    //   const result = await fetch.image('1', '1')
-
-    //   expect(result.unwrap).to.throw(FetchError, /unknown error/i)
-    // })
-
-    it('can return the smallest scaled image that is still >= the optionally given dimensions', async () => {
-      const result = (
-        await fetch.image('1', '1', { height: 9, width: 9 })
-      ).unwrap<Image>()
-
-      expect(result ? result.url : null).to.equal('url10')
-    })
-
-    it('only requires a min height or a width to be specified', async () => {
-      const height = (await fetch.image('1', '1', { height: 100 })).unwrap<
-        Image
-      >()
-      const width = (await fetch.image('1', '1', { width: 100 })).unwrap<
-        Image
-      >()
-
-      expect(height ? height.url : null).to.equal('url100')
-      expect(width ? width.url : null).to.equal('url100')
-    })
-
-    it('but at least one must be given, despite being optional on the MinDimensions interface', async () => {
-      const result = await fetch.image('1', '1', {})
-
-      expect(result.unwrap).to.throw(
-        FetchError,
-        'at least one property on minDimensions must be provided: {}'
+      server.use(
+        rest.get(root + '/card/1/attachments/1', (_, res, ctx) =>
+          res(ctx.json(img))
+        )
       )
+
+      const result = await fetch.image('1', '1')
+
+      expect(result.unwrap).to.throw(/unknown error/i)
     })
-
-    it('must be >= both, if two dimensions are given', async () => {
-      const result = (
-        await fetch.image('1', '1', { height: 1, width: 100 })
-      ).unwrap<Image>()
-
-      expect(result ? result.url : null).to.deep.equal('url100')
-    })
-
-    it("returns the largest available, if there isn't one any bigger", async () => {
-      const result = (
-        await fetch.image('1', '1', { height: 101, width: 101 })
-      ).unwrap<Image>()
-
-      expect(result ? result.url : null).to.deep.equal('url100')
-    })
-  })
-
-  it('tags() returns a list of labels for the board', async () => {
-    const labels = [('a label' as any) as Tag]
-    server.use(
-      rest.get(root + board + '/labels', (_, res, ctx) => res(ctx.json(labels)))
-    )
-
-    expect((await fetch.tags()).unwrap()).to.deep.equal(labels)
   })
 
   describe('recipes()', () => {
     const card1 = Factories.schema.Trello.Card.createWithProperties({
       id: 'recipe1',
+      idAttachmentCover: 'cover1',
       labels: [
         Factories.schema.Trello.Label.createWithData({
           id: 'labelCommon',
@@ -167,6 +116,7 @@ describe('lib/data/fetch', () => {
 
     const card2 = Factories.schema.Trello.Card.createWithProperties({
       id: 'recipe2',
+      idAttachmentCover: 'cover2',
       labels: [
         Factories.schema.Trello.Label.createWithData({
           id: 'labelCommon',
@@ -202,10 +152,23 @@ describe('lib/data/fetch', () => {
       ],
     })
 
+    const cover1 = Factories.schema.Trello.Attachment.createWithData({
+      id: 'cover1',
+    })
+    const cover2 = Factories.schema.Trello.Attachment.createWithData({
+      id: 'cover2',
+    })
+
     beforeEach(() => {
       server.use(
         rest.get(root + board + '/cards', (_, res, ctx) =>
           res(ctx.json([card1, card2, card3]))
+        ),
+        rest.get(root + '/card/recipe1/attachments/cover1', (_, res, ctx) =>
+          res(ctx.json(cover1))
+        ),
+        rest.get(root + '/card/recipe2/attachments/cover2', (_, res, ctx) =>
+          res(ctx.json(cover2))
         )
       )
     })
@@ -218,12 +181,52 @@ describe('lib/data/fetch', () => {
       expect(result[2].id).to.equal('recipe3')
     })
 
-    it('each recipe has a cover image ID that can be null', async () => {
+    it('each recipe has a cover image that can be null', async () => {
       const result = (await fetch.recipes()).unwrap() as any[]
 
-      expect(result[0].idAttachmentCover).to.equal('img')
-      expect(result[1].idAttachmentCover).to.equal('img')
-      expect(result[2].idAttachmentCover).to.be.null
+      expect(result[0].cover).to.haveOwnProperty('id').that.equals('cover1')
+      expect(result[1].cover).to.haveOwnProperty('id').that.equals('cover2')
+      expect(result[2].cover).to.be.null
+    })
+
+    it('replaces unpublished cover images with null value', async () => {
+      const card = Factories.schema.Trello.Card.createWithProperties({
+        id: 'recipe',
+        idAttachmentCover: 'cover',
+      })
+      const unpublished = Factories.schema.Trello.Attachment.createWithData({
+        id: 'cover',
+        name: 'unpublished',
+      })
+
+      server.use(
+        rest.get(root + board + '/cards', (_, res, ctx) =>
+          res(ctx.json([card]))
+        ),
+        rest.get(root + '/card/recipe/attachments/cover', (_, res, ctx) =>
+          res(ctx.json(unpublished))
+        )
+      )
+
+      expect((await fetch.recipes()).unwrap()[0].cover).to.be.null
+    })
+
+    it('wraps unexpected errors while getting cover images', async () => {
+      const card = Factories.schema.Trello.Card.createWithProperties({
+        id: 'recipe',
+        idAttachmentCover: 'cover',
+      })
+
+      server.use(
+        rest.get(root + board + '/cards', (_, res, ctx) =>
+          res(ctx.json([card]))
+        ),
+        rest.get(root + '/card/recipe/attachments/cover', (_, res, ctx) =>
+          res(ctx.status(500))
+        )
+      )
+
+      expect((await fetch.recipes()).unwrap).to.throw(/500/)
     })
   })
 
@@ -276,17 +279,17 @@ describe('lib/data/fetch', () => {
     })
   })
 
-  describe('search()', () => {
-    it('returns a list of recipes matching the given query', async () => {
-      server.use(
-        rest.get(root + `/search`, (_, res, ctx) =>
-          res(ctx.json({ cards: [{ name: 'found me' } as Card] }))
-        )
-      )
+  // describe('search()', () => {
+  //   it('returns a list of recipes matching the given query', async () => {
+  //     server.use(
+  //       rest.get(root + `/search`, (_, res, ctx) =>
+  //         res(ctx.json({ cards: [{ name: 'found me' } as Card] }))
+  //       )
+  //     )
 
-      const result = (await fetch.search('a query')).unwrap() as any
+  //     const result = (await fetch.search('a query')).unwrap() as any
 
-      expect(result[0].name).to.equal('found me')
-    })
-  })
+  //     expect(result[0].name).to.equal('found me')
+  //   })
+  // })
 })

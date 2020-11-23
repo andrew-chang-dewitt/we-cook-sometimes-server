@@ -24,13 +24,27 @@ interface ErrorHandler<U, E extends Error> {
   (e: E): U
 }
 
+class UnwrapError<E extends Error = Error> extends Error {
+  constructor(result: Err<E>) {
+    super(
+      `Error Result unwrapped without a handler:
+     ${result.err.message}`
+    )
+
+    this.stack = `${new Error().stack}
+${result.err.stack}`
+  }
+}
+
 const unwrap = <T, U, E extends Error>(
   result: ResultType<T, E>,
   errHandler?: ErrorHandler<U, E>
 ): T | U => {
   if (isOk(result)) return result.ok
   if (errHandler !== undefined) return errHandler(result.err)
-  else throw result.err
+  else {
+    throw new UnwrapError(result)
+  }
 }
 
 interface MapOkFn<T, U> {
