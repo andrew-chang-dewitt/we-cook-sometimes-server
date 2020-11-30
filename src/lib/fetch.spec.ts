@@ -8,9 +8,9 @@ import Factories from '../testUtils/Factories'
 chai.use(chaiAsPromised)
 const expect = chai.expect
 
-import { Tag, Image } from '../schema/data'
-import { Card, Attachment } from '../schema/trello'
-import fetch, { FetchError } from './fetch'
+import { Tag } from '../schema/data'
+import { Attachment } from '../schema/trello'
+import fetch from './fetch'
 
 describe('lib/data/fetch', () => {
   const root = 'https://api.trello.com/1'

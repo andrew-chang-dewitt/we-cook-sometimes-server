@@ -2,7 +2,6 @@
 
 import * as Data from '../schema/data'
 import * as Trello from '../schema/trello'
-import * as fetchLib from '../lib/fetch'
 
 interface AttachmentProps {
   id?: string
@@ -61,7 +60,7 @@ interface CardProps {
   name?: string
   shortLink?: string
   labels?: Array<Trello.Label>
-  idAttachmentCover?: string
+  idAttachmentCover?: string | null
   idList?: string
 }
 
