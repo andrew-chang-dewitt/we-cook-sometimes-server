@@ -24,12 +24,12 @@ export interface RecipeCard {
   name: string
   shortLink: string
   tags: Array<Tag>
-  cover: Image
+  cover: Image | null
   idList: string
 }
 
 export interface RecipeDetails {
   id: string
   desc: string
-  images: Array<Image>
+  images: Array<Image | null>
 }
