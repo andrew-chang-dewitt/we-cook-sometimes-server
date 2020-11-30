@@ -22,7 +22,7 @@ const isImage = (obj: Trello.Attachment | Data.Image): obj is Data.Image =>
 
 export const buildRecipeCard = (
   { id, name, shortLink, labels, idList }: Trello.Card,
-  coverImage: Trello.Attachment | Data.Image
+  coverImage: Trello.Attachment | Data.Image | null
 ): Data.RecipeCard => ({
   id,
   name,
@@ -39,9 +39,9 @@ export const buildRecipeCard = (
 
 export const buildRecipeDetails = (
   { id, desc }: Trello.CardDetails,
-  images: Array<Trello.Attachment>
+  images: Array<Trello.Attachment | null>
 ): Data.RecipeDetails => ({
   id,
   desc,
-  images: images.map((attachment) => buildImage(attachment)),
+  images: images.map((attachment) => attachment ? buildImage(attachment) : null),
 })
