@@ -31,5 +31,5 @@ export interface RecipeCard {
 export interface RecipeDetails {
   id: string
   desc: string
-  images: Array<Image | null>
+  images: Array<Image>
 }

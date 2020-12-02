@@ -173,16 +173,19 @@ export const recipes = async (): Promise<
             // the array to just a simple array of Data.Image objects much simpler
             // the one caveat: unwrapping cardResults can throw an error that has
             // to be caught later
-            images: // tsserver doesn't throw a linting error on Promise.all'ing
-            // CardResults.unwrap().map(getImageFromCard)), but something else
-            // does. The line compiles with no errors though.
-            // This seems similar to other linting errors that have shown up in
-            // TS projects but aren't thrown by ALE w/ tsserver
-            (
-              await Promise.all(cardResults.unwrap().map(getImageFromCard))
-            ).map((possibleResult: null | Result<Data.Image, FetchError>) =>
-              possibleResult ? possibleResult.unwrap<null>(onImageError) : null
-            ),
+            images:
+              // tsserver doesn't throw a linting error on Promise.all'ing
+              // CardResults.unwrap().map(getImageFromCard)), but something else
+              // does. The line compiles with no errors though.
+              // This seems similar to other linting errors that have shown up in
+              // TS projects but aren't thrown by ALE w/ tsserver
+              (
+                await Promise.all(cardResults.unwrap().map(getImageFromCard))
+              ).map((possibleResult: null | Result<Data.Image, FetchError>) =>
+                possibleResult
+                  ? possibleResult.unwrap<null>(onImageError)
+                  : null
+              ),
           }
         }
       )

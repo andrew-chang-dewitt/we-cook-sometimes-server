@@ -39,9 +39,9 @@ export const buildRecipeCard = (
 
 export const buildRecipeDetails = (
   { id, desc }: Trello.CardDetails,
-  images: Array<Trello.Attachment | null>
+  images: Array<Trello.Attachment>
 ): Data.RecipeDetails => ({
   id,
   desc,
-  images: images.map((attachment) => attachment ? buildImage(attachment) : null),
+  images: images.map(buildImage),
 })

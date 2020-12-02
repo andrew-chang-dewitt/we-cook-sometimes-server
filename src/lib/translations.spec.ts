@@ -71,8 +71,8 @@ describe('translations', () => {
 
       const recipeDetails = buildRecipeDetails(details, images)
 
-      expect(recipeDetails.images[0]?.id).to.equal(images[0].id)
-      expect(recipeDetails.images[1]?.id).to.equal(images[1].id)
+      expect(recipeDetails.images[0].id).to.equal(images[0].id)
+      expect(recipeDetails.images[1].id).to.equal(images[1].id)
       expect(recipeDetails.desc).to.equal(details.desc)
     })
   })
