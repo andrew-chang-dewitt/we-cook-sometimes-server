@@ -56,7 +56,7 @@ describe('translations', () => {
 
       const recipeCard = buildRecipeCard(card, image)
 
-      expect(recipeCard.cover.id).to.equal(image.id)
+      expect(recipeCard.cover?.id).to.equal(image.id)
       expect(recipeCard.id).to.equal(card.id)
     })
   })
@@ -71,8 +71,8 @@ describe('translations', () => {
 
       const recipeDetails = buildRecipeDetails(details, images)
 
-      expect(recipeDetails.images[0].id).to.equal(images[0].id)
-      expect(recipeDetails.images[1].id).to.equal(images[1].id)
+      expect(recipeDetails.images[0]?.id).to.equal(images[0].id)
+      expect(recipeDetails.images[1]?.id).to.equal(images[1].id)
       expect(recipeDetails.desc).to.equal(details.desc)
     })
   })
