@@ -8,7 +8,8 @@ import model from './lib/database'
 
 const app = express()
 const port = process.env.PORT || 8001
-const apiVersion = '1b'
+// FIXME: update this to 1 when on beta, rc, & actual release
+const apiVersion = '1a'
 const baseRoute = `/api/${apiVersion}`
 
 let shuttingDown = false
