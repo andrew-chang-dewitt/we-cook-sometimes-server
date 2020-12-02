@@ -8,7 +8,7 @@ import {
   Cursor,
 } from 'mongodb'
 
-import { RecipeCard, RecipeDetails, Tag } from './schema/data'
+import { RecipeCard, RecipeDetails, Tag } from '../schema/data'
 
 const dbpassword = process.env.DBPASS
 const dbname = 'test'

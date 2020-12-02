@@ -1,8 +1,8 @@
 import { Db, MongoClient } from 'mongodb'
 
-import * as fetch from './lib/fetch'
-import { RecipeDetails } from './schema/data'
-import db from './database'
+import * as fetch from '../lib/fetch'
+import { RecipeDetails } from '../schema/data'
+import db from '../lib/database'
 
 export const tags = fetch
   .tags()
