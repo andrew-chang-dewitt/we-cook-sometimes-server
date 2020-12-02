@@ -79,7 +79,7 @@ const create = <T>(db: Db, collection: CollectionName): Creator<T> => {
 }
 
 interface Reader<T> {
-  many: () => Cursor<T>
+  many: (query?: { [x: string]: any }) => Cursor<T>
   one: (id: string) => Promise<T | null>
 }
 
@@ -87,7 +87,7 @@ const read = <T>(db: Db, collection: CollectionName): Reader<T> => {
   const c = resolveCollection(db, collection)
 
   return {
-    many: () => c.find(),
+    many: (query) => (query ? c.find(query) : c.find()),
     one: (id) => c.findOne({ id: id }),
   }
 }
