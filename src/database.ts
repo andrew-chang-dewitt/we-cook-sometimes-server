@@ -4,6 +4,7 @@ import {
   Collection as DBCollection,
   InsertWriteOpResult,
   InsertOneWriteOpResult,
+  FindAndModifyWriteOpResultObject,
   Cursor,
 } from 'mongodb'
 
@@ -49,6 +50,8 @@ const resolveCollection = (
 interface Collection<T> {
   create: Creator<T>
   read: Reader<T>
+  update: Updater<T>
+  deleteDoc: Deleter<T>
 }
 
 const CollectionBuilder = <T>(
@@ -57,6 +60,8 @@ const CollectionBuilder = <T>(
 ): Collection<T> => ({
   create: create<T>(db, collection),
   read: read<T>(db, collection),
+  update: update<T>(db, collection),
+  deleteDoc: deleteDoc<T>(db, collection),
 })
 
 interface Creator<T> {
@@ -87,8 +92,38 @@ const read = <T>(db: Db, collection: CollectionName): Reader<T> => {
   }
 }
 
+interface Updater<T extends Object> {
+  one: (
+    id: string,
+    updatedDocument: T
+  ) => Promise<FindAndModifyWriteOpResultObject<T>>
+}
+
+const update = <T extends Object>(
+  db: Db,
+  collection: CollectionName
+): Updater<T> => {
+  const c = resolveCollection(db, collection)
+
+  return {
+    one: (id, updatedDocument) =>
+      c.findOneAndReplace({ id: id }, updatedDocument),
+  }
+}
+
+interface Deleter<T> {
+  one: (id: string) => Promise<FindAndModifyWriteOpResultObject<T>>
+}
+
+const deleteDoc = <T>(db: Db, collection: CollectionName): Deleter<T> => {
+  const c = resolveCollection(db, collection)
+
+  return {
+    one: (id) => c.findOneAndDelete({ id: id }),
+  }
+}
+
 export default {
-  dburi,
   connect,
   Recipe: (db: Db) => CollectionBuilder<RecipeCard>(db, CollectionName.Recipes),
   Detail: (db: Db) =>
