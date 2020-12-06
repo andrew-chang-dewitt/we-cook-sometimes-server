@@ -8,6 +8,8 @@ import model from './lib/database'
 import { buildTag } from './lib/translations'
 import { Tag } from './schema/data'
 
+import getRouter from './routes/getRouter'
+
 const app = express()
 const port = process.env.PORT || 8001
 // FIXME: update this to 1 when on beta, rc, & actual release
@@ -48,46 +50,8 @@ model
       res.send('API is up')
     })
 
-    // get all tags
-    app.get(baseRoute + '/tag/all', (_, res, next) => {
-      model
-        .Tag(db)
-        .read.many()
-        .toArray()
-        .then((tags) => res.json(tags))
-        .catch(next)
-    })
-
-    // get all recipes
-    app.get(baseRoute + '/recipe/all', (_, res, next) => {
-      model
-        .Recipe(db)
-        .read.many()
-        .toArray()
-        .then((recipes) => res.json(recipes))
-        .catch(next)
-    })
-
-    // get all published recipes
-    app.get(baseRoute + '/recipe/published', (_, res, next) => {
-      model
-        .Recipe(db)
-        // query for just the recipes with a tag that has
-        // a name == published
-        .read.many({ 'tags.name': 'published' })
-        .toArray()
-        .then((recipes) => res.json(recipes))
-        .catch(next)
-    })
-
-    // get the details for a specific recipe
-    app.get(baseRoute + '/recipe/details/:id', (req, res, next) => {
-      model
-        .Detail(db)
-        .read.one(req.params.id)
-        .then((recipe) => res.json(recipe))
-        .catch(next)
-    })
+    // routes for fetching data from Db
+    app.use(baseRoute, getRouter({ db }))
 
     // receive updates from Trello
     //
