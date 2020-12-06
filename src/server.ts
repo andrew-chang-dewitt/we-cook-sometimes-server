@@ -5,6 +5,8 @@ import morgan from 'morgan'
 // import path from 'path'
 
 import model from './lib/database'
+import { buildTag } from './lib/translations'
+import { Tag } from './schema/data'
 
 const app = express()
 const port = process.env.PORT || 8001
@@ -103,9 +105,12 @@ model
     app.post(hookRoute, (req, res) => {
       const action = req.body.action
 
+      // console.dir(action)
+
       switch (action.type) {
         case 'updateCard': {
           const id = action.data.card.id
+
           // determine what changed & if it's RecipeCard or RecipeDetails
           // then make change in appropriate collection on DB
           switch (action.display.translationKey) {
@@ -126,16 +131,14 @@ model
                 })
               break
             }
+
             case 'action_changed_description_of_card': {
               // RecipeDetails, desc changed
-              // get current Recipe by action.data.card.id
-              console.log('action.data.card:')
-              console.dir(action.data.card)
-
+              // get current Detail by action.data.card.id
               model
                 .Detail(db)
                 .read.one(id)
-                // then Update that Recipe in DB with new name
+                // then Update that Detail in DB with new name
                 .then((current) => {
                   current
                     ? model.Detail(db).update.one(id, {
@@ -147,6 +150,64 @@ model
               break
             }
           }
+
+          break
+        }
+
+        case 'addLabelToCard': {
+          const id = action.data.card.id
+
+          // get the model for the Recipe being modified by the hook
+          model
+            .Recipe(db)
+            .read.one(id)
+            // then construct a new model without the label being added
+            .then((current) => {
+              // & update the old model of the Recipe with the newly modified model
+              current
+                ? model.Recipe(db).update.one(id, {
+                    ...current,
+                    tags: [...current.tags, buildTag(action.data.label)],
+                  })
+                : null
+            })
+          break
+        }
+
+        case 'removeLabelFromCard': {
+          const id = action.data.card.id
+
+          // get the model for the Recipe being modified by the hook
+          model
+            .Recipe(db)
+            .read.one(id)
+            .then((current) => {
+              // then construct a new model without the label being removed
+              if (current) {
+                const newTags = current.tags.reduce((remaining, current) => {
+                  // spread to clone to avoid side effecting same array between
+                  // calls to reduce callback
+                  const res = [...remaining]
+
+                  // if current label isn't the one being removed
+                  current.id !== action.data.label.id
+                    ? // add it to list of remaining labels
+                      res.push(current)
+                    : // otherwise, don't push it so it won't end up in the
+                      // resulting list
+                      null
+
+                  return res
+                }, [] as Array<Tag>)
+
+                // & update the old model of the Recipe with the newly modified model
+                model.Recipe(db).update.one(id, {
+                  ...current,
+                  tags: newTags,
+                })
+              }
+            })
+          break
         }
       }
 
