@@ -1,8 +1,12 @@
-import { Db, FindAndModifyWriteOpResultObject } from 'mongodb'
+import {
+  Db,
+  FindAndModifyWriteOpResultObject,
+  InsertOneWriteOpResult,
+} from 'mongodb'
 
 import { Tag, RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
-import { buildTag } from '../lib/translations'
+import { buildTag, buildRecipeCard } from '../lib/translations'
 import model from './database'
 
 enum ActionType {
@@ -10,12 +14,13 @@ enum ActionType {
   RemoveLabelFromCard = 'removeLabelFromCard',
   AddLabelToCard = 'addLabelToCard',
   AddAttachmentToCard = 'addAttachmentToCard',
+  CreateCard = 'createCard',
 }
 
 class UnhandledActionError extends Error {}
 class DocumentNotFoundError extends Error {}
 
-type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard
+type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard | CreateCard
 
 interface ActionBase {
   data: {}
@@ -24,7 +29,8 @@ interface ActionBase {
 const fold = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
   removeLabelFromCard: (action: RemoveLabelFromCard) => ReturnType,
-  addLabelToCard: (action: AddLabelToCard) => ReturnType
+  addLabelToCard: (action: AddLabelToCard) => ReturnType,
+  createCard: (action: CreateCard) => ReturnType
 ) => (action: Action): ReturnType => {
   switch (action.type) {
     case ActionType.UpdateCard:
@@ -33,6 +39,8 @@ const fold = <ReturnType extends any>(
       return removeLabelFromCard(action)
     case ActionType.AddLabelToCard:
       return addLabelToCard(action)
+    case ActionType.CreateCard:
+      return createCard(action)
     default:
       throw new UnhandledActionError()
   }
@@ -229,12 +237,47 @@ const handleAddLabelToCard = (
       throw new DocumentNotFoundError()
     })
 
-export default (
-  action: Action,
+interface CreateCard extends ActionBase {
+  type: ActionType.CreateCard
+  data: {
+    card: {
+      id: string
+      name: string
+      shortLink: string
+    }
+  }
+}
+
+const handleCreateCard = (
+  action: CreateCard,
   db: Db
-): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> =>
-  fold(
+): Promise<InsertOneWriteOpResult<any>> => {
+  const { id, name, shortLink } = action.data.card
+  // build a new RecipeCard from Action & push to DB
+  return model.Recipe(db).create.one(
+    buildRecipeCard(
+      {
+        id,
+        name,
+        shortLink,
+        idList: '',
+        labels: [],
+        idAttachmentCover: null,
+      },
+      null
+    )
+  )
+}
+
+export default (action: Action, db: Db) =>
+  fold<
+    Promise<
+      | FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>
+      | InsertOneWriteOpResult<any>
+    >
+  >(
     (action: UpdateCard) => handleUpdateCard(action, db),
     (action: RemoveLabelFromCard) => handleRemoveLabelFromCard(action, db),
-    (action: AddLabelToCard) => handleAddLabelToCard(action, db)
+    (action: AddLabelToCard) => handleAddLabelToCard(action, db),
+    (action: CreateCard) => handleCreateCard(action, db)
   )(action)
