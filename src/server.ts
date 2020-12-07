@@ -60,10 +60,8 @@ model
     /*
      * Error Handling
      */
-    app.use(((err, req, res, _) => {
+    app.use(((err, _, res, __) => {
       console.error('An error occurred with the following request:')
-      console.error(`${req.method} ${req.originalUrl}`)
-      // console.error(err)
       console.dir(err)
 
       res.status(500).json({
@@ -73,10 +71,16 @@ model
       })
     }) as ErrorRequestHandler)
 
+    /*
+     * Running the server
+     */
+
+    // start the server & save the returned object for later
     const server = app.listen(port, () => {
       console.debug(`server started at localhost:${port}`)
     })
 
+    // shuts down the server, triggering graceful exit
     const shutDownServer = () => {
       // alert others that the system is shutting down
       shuttingDown = true
