@@ -47,7 +47,7 @@ const resolveCollection = (
   }
 }
 
-interface Collection<T> {
+export interface Collection<T> {
   create: Creator<T>
   read: Reader<T>
   update: Updater<T>
