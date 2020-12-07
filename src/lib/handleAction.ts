@@ -16,7 +16,7 @@ class DocumentNotFoundError extends Error {}
 
 type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard
 
-const fold = <ReturnType extends any>(
+const foldAction = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
   removeLabelFromCard: (action: RemoveLabelFromCard) => ReturnType,
   addLabelToCard: (action: AddLabelToCard) => ReturnType
@@ -33,11 +33,17 @@ const fold = <ReturnType extends any>(
   }
 }
 
-type UpdateCard = UpdateCardName | UpdateCardDesc
+type UpdateCard = UpdateCardName | UpdateCardDesc | UpdateCardList
+
+enum UpdateCardType {
+  Name = 'action_renamed_card',
+  Desc = 'action_changed_description_of_card',
+  List = 'action_move_card_from_list_to_list',
+}
 
 interface UpdateCardName extends ActionBase {
   type: ActionType.UpdateCard
-  display: { translationKey: 'action_renamed_card' }
+  display: { translationKey: UpdateCardType.Name }
   data: {
     card: {
       id: string
@@ -48,7 +54,7 @@ interface UpdateCardName extends ActionBase {
 
 interface UpdateCardDesc extends ActionBase {
   type: ActionType.UpdateCard
-  display: { translationKey: 'action_changed_description_of_card' }
+  display: { translationKey: UpdateCardType.Desc }
   data: {
     card: {
       id: string
@@ -57,10 +63,23 @@ interface UpdateCardDesc extends ActionBase {
   }
 }
 
+interface UpdateCardList extends ActionBase {
+  type: ActionType.UpdateCard
+  display: { translationKey: UpdateCardType.List }
+  data: {
+    card: {
+      id: string
+      idList: string
+    }
+  }
+}
+
 const isUpdateCardName = (update: UpdateCard): update is UpdateCardName =>
-  update.display.translationKey === 'action_renamed_card'
+  update.display.translationKey === UpdateCardType.Name
 const isUpdateCardDesc = (update: UpdateCard): update is UpdateCardDesc =>
-  update.display.translationKey === 'action_changed_description_of_card'
+  update.display.translationKey === UpdateCardType.Desc
+const isUpdateCardList = (update: UpdateCard): update is UpdateCardList =>
+  update.display.translationKey === UpdateCardType.List
 
 interface RemoveLabelFromCard extends ActionBase {
   type: ActionType.RemoveLabelFromCard
@@ -86,48 +105,69 @@ interface ActionBase {
   data: {}
 }
 
+const handleUpdateCardName = (
+  action: UpdateCardName,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeCard>> =>
+  // get current Recipe by action.data.card.id
+  model
+    .Recipe(db)
+    .read.one(action.data.card.id)
+    // then Update that Recipe in DB with new name
+    .then((current) => {
+      if (current)
+        return model.Recipe(db).update.one(action.data.card.id, {
+          ...current,
+          name: action.data.card.name as string,
+        })
+      else throw DocumentNotFoundError
+    })
+
+const handleUpdateCardDesc = (
+  action: UpdateCardDesc,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeDetails>> =>
+  // get current Detail by action.data.card.id
+  model
+    .Detail(db)
+    .read.one(action.data.card.id)
+    // then Update that Detail in DB with new name
+    .then((current) => {
+      if (current)
+        return model.Detail(db).update.one(action.data.card.id, {
+          ...current,
+          desc: action.data.card.desc as string,
+        })
+      else throw DocumentNotFoundError
+    })
+
+const handleUpdateCardList = (
+  action: UpdateCardList,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeCard>> =>
+  // get current Detail by action.data.card.id
+  model
+    .Recipe(db)
+    .read.one(action.data.card.id)
+    // then Update that Recipe in DB w/ new List
+    .then((current) => {
+      if (current)
+        return model.Recipe(db).update.one(action.data.card.id, {
+          ...current,
+          idList: action.data.card.idList,
+        })
+      else throw DocumentNotFoundError
+    })
+
 const handleUpdateCard = (
   action: UpdateCard,
   db: Db
 ): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> => {
-  const id = action.data.card.id
-
   // determine what changed & if it's RecipeCard or RecipeDetails
-  // then make change in appropriate collection on DB
-  if (isUpdateCardName(action))
-    // RecipeCard, name changed
-    // get current Recipe by action.data.card.id
-    return (
-      model
-        .Recipe(db)
-        .read.one(id)
-        // then Update that Recipe in DB with new name
-        .then((current) => {
-          if (current)
-            return model.Recipe(db).update.one(id, {
-              ...current,
-              name: action.data.card.name as string,
-            })
-          else throw DocumentNotFoundError
-        })
-    )
-  else if (isUpdateCardDesc(action))
-    // RecipeDetails, desc changed
-    // get current Detail by action.data.card.id
-    return (
-      model
-        .Detail(db)
-        .read.one(id)
-        // then Update that Detail in DB with new name
-        .then((current) => {
-          if (current)
-            return model.Detail(db).update.one(id, {
-              ...current,
-              desc: action.data.card.desc as string,
-            })
-          else throw DocumentNotFoundError
-        })
-    )
+  // then defer to handler to make change in appropriate collection on DB
+  if (isUpdateCardName(action)) return handleUpdateCardName(action, db)
+  else if (isUpdateCardDesc(action)) return handleUpdateCardDesc(action, db)
+  else if (isUpdateCardList(action)) return handleUpdateCardList(action, db)
   else throw UnhandledActionError
 }
 
@@ -190,7 +230,7 @@ export default (
   action: Action,
   db: Db
 ): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> =>
-  fold(
+  foldAction(
     (action: UpdateCard) => handleUpdateCard(action, db),
     (action: RemoveLabelFromCard) => handleRemoveLabelFromCard(action, db),
     (action: AddLabelToCard) => handleAddLabelToCard(action, db)
