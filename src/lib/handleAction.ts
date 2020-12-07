@@ -15,17 +15,13 @@ enum ActionType {
 class UnhandledActionError extends Error {}
 class DocumentNotFoundError extends Error {}
 
-type Action =
-  | UpdateCard
-  | RemoveLabelFromCard
-  | AddLabelToCard
-  | AddAttachmentToCard
+type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard
 
 interface ActionBase {
   data: {}
 }
 
-const foldAction = <ReturnType extends any>(
+const fold = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
   removeLabelFromCard: (action: RemoveLabelFromCard) => ReturnType,
   addLabelToCard: (action: AddLabelToCard) => ReturnType
@@ -38,7 +34,7 @@ const foldAction = <ReturnType extends any>(
     case ActionType.AddLabelToCard:
       return addLabelToCard(action)
     default:
-      throw UnhandledActionError
+      throw new UnhandledActionError()
   }
 }
 
@@ -105,7 +101,7 @@ const handleUpdateCardName = (
           ...current,
           name: action.data.card.name as string,
         })
-      else throw DocumentNotFoundError
+      else throw new DocumentNotFoundError()
     })
 
 const handleUpdateCardDesc = (
@@ -123,7 +119,7 @@ const handleUpdateCardDesc = (
           ...current,
           desc: action.data.card.desc as string,
         })
-      else throw DocumentNotFoundError
+      else throw new DocumentNotFoundError()
     })
 
 const handleUpdateCardList = (
@@ -141,7 +137,7 @@ const handleUpdateCardList = (
           ...current,
           idList: action.data.card.idList,
         })
-      else throw DocumentNotFoundError
+      else throw new DocumentNotFoundError()
     })
 
 const handleUpdateCard = (
@@ -153,7 +149,7 @@ const handleUpdateCard = (
   if (isUpdateCardName(action)) return handleUpdateCardName(action, db)
   else if (isUpdateCardDesc(action)) return handleUpdateCardDesc(action, db)
   else if (isUpdateCardList(action)) return handleUpdateCardList(action, db)
-  else throw UnhandledActionError
+  else throw new UnhandledActionError()
 }
 
 interface RemoveLabelFromCard extends ActionBase {
@@ -199,7 +195,8 @@ const handleRemoveLabelFromCard = (
           tags: newTags,
         })
       }
-      throw DocumentNotFoundError
+
+      throw new DocumentNotFoundError()
     })
 
 interface AddLabelToCard extends ActionBase {
@@ -228,14 +225,15 @@ const handleAddLabelToCard = (
           ...current,
           tags: [...current.tags, buildTag(action.data.label)],
         })
-      throw DocumentNotFoundError
+
+      throw new DocumentNotFoundError()
     })
 
 export default (
   action: Action,
   db: Db
 ): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> =>
-  foldAction(
+  fold(
     (action: UpdateCard) => handleUpdateCard(action, db),
     (action: RemoveLabelFromCard) => handleRemoveLabelFromCard(action, db),
     (action: AddLabelToCard) => handleAddLabelToCard(action, db)
