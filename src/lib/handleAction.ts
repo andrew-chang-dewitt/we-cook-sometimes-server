@@ -6,7 +6,11 @@ import {
 
 import { Tag, RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
-import { buildTag, buildRecipeCard } from '../lib/translations'
+import {
+  buildTag,
+  buildRecipeCard,
+  buildRecipeDetails,
+} from '../lib/translations'
 import model from './database'
 
 enum ActionType {
@@ -254,19 +258,32 @@ const handleCreateCard = (
 ): Promise<InsertOneWriteOpResult<any>> => {
   const { id, name, shortLink } = action.data.card
   // build a new RecipeCard from Action & push to DB
-  return model.Recipe(db).create.one(
-    buildRecipeCard(
-      {
-        id,
-        name,
-        shortLink,
-        idList: '',
-        labels: [],
-        idAttachmentCover: null,
-      },
-      null
+  return model
+    .Recipe(db)
+    .create.one(
+      buildRecipeCard(
+        {
+          id,
+          name,
+          shortLink,
+          idList: '',
+          labels: [],
+          idAttachmentCover: null,
+        },
+        null
+      )
     )
-  )
+    .then((_) =>
+      model.Detail(db).create.one(
+        buildRecipeDetails(
+          {
+            id,
+            desc: '',
+          },
+          []
+        )
+      )
+    )
 }
 
 export default (action: Action, db: Db) =>
