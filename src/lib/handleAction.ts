@@ -9,12 +9,21 @@ enum ActionType {
   UpdateCard = 'updateCard',
   RemoveLabelFromCard = 'removeLabelFromCard',
   AddLabelToCard = 'addLabelToCard',
+  AddAttachmentToCard = 'addAttachmentToCard',
 }
 
 class UnhandledActionError extends Error {}
 class DocumentNotFoundError extends Error {}
 
-type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard
+type Action =
+  | UpdateCard
+  | RemoveLabelFromCard
+  | AddLabelToCard
+  | AddAttachmentToCard
+
+interface ActionBase {
+  data: {}
+}
 
 const foldAction = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
@@ -80,30 +89,6 @@ const isUpdateCardDesc = (update: UpdateCard): update is UpdateCardDesc =>
   update.display.translationKey === UpdateCardType.Desc
 const isUpdateCardList = (update: UpdateCard): update is UpdateCardList =>
   update.display.translationKey === UpdateCardType.List
-
-interface RemoveLabelFromCard extends ActionBase {
-  type: ActionType.RemoveLabelFromCard
-  data: {
-    card: {
-      id: string
-    }
-    label: Label
-  }
-}
-
-interface AddLabelToCard extends ActionBase {
-  type: ActionType.AddLabelToCard
-  data: {
-    card: {
-      id: string
-    }
-    label: Label
-  }
-}
-
-interface ActionBase {
-  data: {}
-}
 
 const handleUpdateCardName = (
   action: UpdateCardName,
@@ -171,24 +156,15 @@ const handleUpdateCard = (
   else throw UnhandledActionError
 }
 
-const handleAddLabelToCard = (
-  action: AddLabelToCard,
-  db: Db
-): Promise<FindAndModifyWriteOpResultObject<RecipeCard>> =>
-  // get the model for the Recipe being modified by the hook
-  model
-    .Recipe(db)
-    .read.one(action.data.card.id)
-    // then construct a new model without the label being added
-    .then((current) => {
-      // & update the old model of the Recipe with the newly modified model
-      if (current)
-        return model.Recipe(db).update.one(action.data.card.id, {
-          ...current,
-          tags: [...current.tags, buildTag(action.data.label)],
-        })
-      throw DocumentNotFoundError
-    })
+interface RemoveLabelFromCard extends ActionBase {
+  type: ActionType.RemoveLabelFromCard
+  data: {
+    card: {
+      id: string
+    }
+    label: Label
+  }
+}
 
 const handleRemoveLabelFromCard = (
   action: RemoveLabelFromCard,
@@ -223,6 +199,35 @@ const handleRemoveLabelFromCard = (
           tags: newTags,
         })
       }
+      throw DocumentNotFoundError
+    })
+
+interface AddLabelToCard extends ActionBase {
+  type: ActionType.AddLabelToCard
+  data: {
+    card: {
+      id: string
+    }
+    label: Label
+  }
+}
+
+const handleAddLabelToCard = (
+  action: AddLabelToCard,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeCard>> =>
+  // get the model for the Recipe being modified by the hook
+  model
+    .Recipe(db)
+    .read.one(action.data.card.id)
+    // then construct a new model without the label being added
+    .then((current) => {
+      // & update the old model of the Recipe with the newly modified model
+      if (current)
+        return model.Recipe(db).update.one(action.data.card.id, {
+          ...current,
+          tags: [...current.tags, buildTag(action.data.label)],
+        })
       throw DocumentNotFoundError
     })
 
