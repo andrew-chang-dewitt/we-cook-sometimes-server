@@ -23,7 +23,7 @@ export interface RecipeCard {
   id: string
   name: string
   shortLink: string
-  tags: Array<Tag>
+  tags: Array<string>
   cover: Image | null
   idList: string
 }

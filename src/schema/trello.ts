@@ -23,7 +23,7 @@ export interface Card {
   id: string
   name: string
   shortLink: string
-  labels: Array<Label>
+  idLabels: Array<string>
   idAttachmentCover: string | null
   idList: string
 }

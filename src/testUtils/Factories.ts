@@ -72,12 +72,7 @@ class Card {
       shortLink: 'https://a-link',
       idAttachmentCover: 'img',
       idList: 'list',
-      labels: [
-        Label.createWithData({
-          id: 'labelATag',
-          name: 'a tag',
-        }),
-      ],
+      idLabels: [ 'aTagId', 'anotherTagId' ],
     }
   }
 
@@ -113,7 +108,7 @@ interface RecipeCardProps {
   id?: string
   name?: string
   shortLink?: string
-  tags?: Array<Data.Tag>
+  tags?: Array<string>
   idAttachmentCover?: string | null
   idList?: string
 }
@@ -123,12 +118,7 @@ class RecipeCard {
     return {
       id: 'recipeId',
       name: 'recipeName',
-      tags: [
-        Tag.createWithData({
-          id: 'tagId',
-          name: 'tag',
-        }),
-      ],
+      tags: [ 'aTagId', 'anotherTagId' ],
     } as Data.RecipeCard
   }
 

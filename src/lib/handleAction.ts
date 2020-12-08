@@ -4,15 +4,16 @@ import {
   InsertOneWriteOpResult,
 } from 'mongodb'
 
-import { Tag, Image, RecipeCard, RecipeDetails } from '../schema/data'
+import { Image, RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
 import {
-  buildTag,
   buildImage,
   buildRecipeCard,
   buildRecipeDetails,
 } from '../lib/translations'
 import model from './database'
+
+import { ok, err, Result } from '../utils/Result'
 
 enum ActionType {
   UpdateCard = 'updateCard',
@@ -217,7 +218,7 @@ const handleRemoveLabelFromCard = (
           const res = [...remaining]
 
           // if current label isn't the one being removed
-          current.id !== action.data.label.id
+          current !== action.data.label.id
             ? // add it to list of remaining labels
               res.push(current)
             : // otherwise, don't push it so it won't end up in the
@@ -225,7 +226,7 @@ const handleRemoveLabelFromCard = (
               null
 
           return res
-        }, [] as Array<Tag>)
+        }, [] as Array<string>)
 
         // & update the old model of the Recipe with the newly modified model
         return model.Recipe(db).update.one(action.data.card.id, {
@@ -261,7 +262,7 @@ const handleAddLabelToCard = (
       if (current)
         return model.Recipe(db).update.one(action.data.card.id, {
           ...current,
-          tags: [...current.tags, buildTag(action.data.label)],
+          tags: [...current.tags, action.data.label.id],
         })
 
       throw new DocumentNotFoundError()
@@ -292,8 +293,16 @@ const handleCreateCard = (
           id,
           name,
           shortLink,
+          // when a new card is created, it's sent without any
+          // labels, list, or cover information in the action.
+          // If labels are added using # notation during card
+          // creation, separate Add Label To Card actions are sent,
+          // so they will be added automatically. Similarly, an
+          // action will be sent when a cover is added.
+          // FIXME: idList isn't sent at the beginning, however; so
+          // some way of getting the right list may be necessary
           idList: '',
-          labels: [],
+          idLabels: [],
           idAttachmentCover: null,
         },
         null
@@ -343,21 +352,25 @@ const handleAddAttachmentToCard = (
 ): Promise<FindAndModifyWriteOpResultObject<RecipeDetails>> => {
   const { id, name, url } = action.data.attachment
 
-  const processPublished = (name: string): string => {
+  // just because an attachment is added to the card, doesn't mean
+  // it's published. This function checks for published status in the
+  // name, then strips the published indicator before returning the
+  // clean name.
+  const checkPublished = (name: string): Result<string, Error> => {
     const split = name.split(']')
     const first = split[0]
 
     if (first === '[published') {
       split.splice(0, 1)
 
-      return split.join('')
-    } else throw new Error('Image not published')
+      return ok(split.join(''))
+    } else return err(Error('Image not published'))
   }
 
   const newImage = buildImage({
     id,
     url,
-    name: processPublished(name),
+    name: checkPublished(name).unwrap(),
     // action.data.attachment doesn't include edge color or
     // previews, for now, just initialize new attachment with empty
     // values the data can later be filled in during a scheduled

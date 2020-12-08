@@ -21,14 +21,14 @@ const isImage = (obj: Trello.Attachment | Data.Image): obj is Data.Image =>
   obj.hasOwnProperty('scaled')
 
 export const buildRecipeCard = (
-  { id, name, shortLink, labels, idList }: Trello.Card,
+  { id, name, shortLink, idLabels, idList }: Trello.Card,
   coverImage: Trello.Attachment | Data.Image | null
 ): Data.RecipeCard => ({
   id,
   name,
   shortLink,
   idList,
-  tags: labels.map((label) => buildTag(label)),
+  tags: idLabels,
   cover:
     coverImage !== null
       ? isImage(coverImage)
