@@ -36,12 +36,6 @@ type Action =
   | AddAttachmentToCard
   | DeleteAttachmentFromCard
 
-interface ActionBase {
-  data: {
-    card: { id: string }
-  }
-}
-
 const fold = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
   removeLabelFromCard: (action: RemoveLabelFromCard) => ReturnType,
@@ -71,6 +65,13 @@ const fold = <ReturnType extends any>(
   }
 }
 
+interface ActionBase {
+  type: ActionType
+  data: {
+    card: { id: string }
+  }
+}
+
 type UpdateCard = UpdateCardName | UpdateCardDesc | UpdateCardList
 
 enum UpdateCardType {
@@ -79,7 +80,11 @@ enum UpdateCardType {
   List = 'action_move_card_from_list_to_list',
 }
 
-interface UpdateCardName extends ActionBase {
+interface UpdateCardBase extends ActionBase {
+  display: { translationKey: UpdateCardType }
+}
+
+interface UpdateCardName extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.Name }
   data: {
@@ -90,7 +95,7 @@ interface UpdateCardName extends ActionBase {
   }
 }
 
-interface UpdateCardDesc extends ActionBase {
+interface UpdateCardDesc extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.Desc }
   data: {
@@ -101,7 +106,7 @@ interface UpdateCardDesc extends ActionBase {
   }
 }
 
-interface UpdateCardList extends ActionBase {
+interface UpdateCardList extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.List }
   data: {
@@ -384,11 +389,10 @@ const handleAddAttachmentToCard = (
 interface DeleteAttachmentFromCard extends ActionBase {
   type: ActionType.DeleteAttachmentFromCard
   data: {
-    card: { id: string }
     attachment: {
       id: string
-      name: string
     }
+    card: { id: string }
   }
 }
 
