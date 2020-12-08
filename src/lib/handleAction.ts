@@ -4,10 +4,11 @@ import {
   InsertOneWriteOpResult,
 } from 'mongodb'
 
-import { Tag, RecipeCard, RecipeDetails } from '../schema/data'
+import { Tag, Image, RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
 import {
   buildTag,
+  buildImage,
   buildRecipeCard,
   buildRecipeDetails,
 } from '../lib/translations'
@@ -17,24 +18,38 @@ enum ActionType {
   UpdateCard = 'updateCard',
   RemoveLabelFromCard = 'removeLabelFromCard',
   AddLabelToCard = 'addLabelToCard',
-  AddAttachmentToCard = 'addAttachmentToCard',
   CreateCard = 'createCard',
+  DeleteCard = 'deleteCard',
+  AddAttachmentToCard = 'addAttachmentToCard',
+  DeleteAttachmentFromCard = 'deleteAttachmentFromCard',
 }
 
 class UnhandledActionError extends Error {}
 class DocumentNotFoundError extends Error {}
 
-type Action = UpdateCard | RemoveLabelFromCard | AddLabelToCard | CreateCard
+type Action =
+  | UpdateCard
+  | RemoveLabelFromCard
+  | AddLabelToCard
+  | CreateCard
+  | DeleteCard
+  | AddAttachmentToCard
+  | DeleteAttachmentFromCard
 
 interface ActionBase {
-  data: {}
+  data: {
+    card: { id: string }
+  }
 }
 
 const fold = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
   removeLabelFromCard: (action: RemoveLabelFromCard) => ReturnType,
   addLabelToCard: (action: AddLabelToCard) => ReturnType,
-  createCard: (action: CreateCard) => ReturnType
+  createCard: (action: CreateCard) => ReturnType,
+  deleteCard: (action: DeleteCard) => ReturnType,
+  addAttachmentToCard: (action: AddAttachmentToCard) => ReturnType,
+  deleteAttachmentFromCard: (action: DeleteAttachmentFromCard) => ReturnType
 ) => (action: Action): ReturnType => {
   switch (action.type) {
     case ActionType.UpdateCard:
@@ -45,6 +60,12 @@ const fold = <ReturnType extends any>(
       return addLabelToCard(action)
     case ActionType.CreateCard:
       return createCard(action)
+    case ActionType.DeleteCard:
+      return deleteCard(action)
+    case ActionType.AddAttachmentToCard:
+      return addAttachmentToCard(action)
+    case ActionType.DeleteAttachmentFromCard:
+      return deleteAttachmentFromCard(action)
     default:
       throw new UnhandledActionError()
   }
@@ -286,6 +307,125 @@ const handleCreateCard = (
     )
 }
 
+interface DeleteCard extends ActionBase {
+  type: ActionType.DeleteCard
+}
+
+const handleDeleteCard = (
+  action: DeleteCard,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> =>
+  model
+    .Recipe(db)
+    .deleteDoc.one(action.data.card.id)
+    .then((_) => model.Detail(db).deleteDoc.one(action.data.card.id))
+
+interface AddAttachmentToCard extends ActionBase {
+  type: ActionType.AddAttachmentToCard
+  data: {
+    attachment: {
+      id: string
+      name: string
+      url: string
+    }
+    card: { id: string }
+  }
+}
+
+const handleAddAttachmentToCard = (
+  action: AddAttachmentToCard,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeDetails>> => {
+  const { id, name, url } = action.data.attachment
+
+  const processPublished = (name: string): string => {
+    const split = name.split(']')
+    const first = split[0]
+
+    if (first === '[published') {
+      split.splice(0, 1)
+
+      return split.join('')
+    } else throw new Error('Image not published')
+  }
+
+  const newImage = buildImage({
+    id,
+    url,
+    name: processPublished(name),
+    // action.data.attachment doesn't include edge color or
+    // previews, for now, just initialize new attachment with empty
+    // values the data can later be filled in during a scheduled
+    // full sync with Trello
+    edgeColor: '',
+    previews: [],
+  })
+
+  return (
+    // get current Detail by action.data.card.id
+    model
+      .Detail(db)
+      .read.one(action.data.card.id)
+      // then Update that Detail in DB with new name
+      .then((current) => {
+        if (current) {
+          const newImages = [...current.images]
+          newImages.push(newImage)
+
+          return model.Detail(db).update.one(action.data.card.id, {
+            ...current,
+            images: newImages,
+          })
+        } else throw new DocumentNotFoundError()
+      })
+  )
+}
+
+interface DeleteAttachmentFromCard extends ActionBase {
+  type: ActionType.DeleteAttachmentFromCard
+  data: {
+    card: { id: string }
+    attachment: {
+      id: string
+      name: string
+    }
+  }
+}
+
+const handleDeleteAttachmentFromCard = (
+  action: DeleteAttachmentFromCard,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<RecipeDetails>> =>
+  model
+    .Detail(db)
+    .read.one(action.data.card.id)
+    .then((current) => {
+      if (current) {
+        // remove attachment
+        const newImages = current.images.reduce((remaining, current) => {
+          // spread to clone to avoid side effecting same array between
+          // calls to reduce callback
+          const res = [...remaining]
+
+          // if current label isn't the one being removed
+          current.id !== action.data.attachment.id
+            ? // add it to list of remaining labels
+              res.push(current)
+            : // otherwise, don't push it so it won't end up in the
+              // resulting list
+              null
+
+          return res
+        }, [] as Array<Image>)
+
+        // update model
+        return model.Detail(db).update.one(action.data.card.id, {
+          ...current,
+          images: newImages,
+        })
+      } else throw new DocumentNotFoundError()
+    })
+
 export default (action: Action, db: Db) =>
   fold<
     Promise<
@@ -296,5 +436,9 @@ export default (action: Action, db: Db) =>
     (action: UpdateCard) => handleUpdateCard(action, db),
     (action: RemoveLabelFromCard) => handleRemoveLabelFromCard(action, db),
     (action: AddLabelToCard) => handleAddLabelToCard(action, db),
-    (action: CreateCard) => handleCreateCard(action, db)
+    (action: CreateCard) => handleCreateCard(action, db),
+    (action: DeleteCard) => handleDeleteCard(action, db),
+    (action: AddAttachmentToCard) => handleAddAttachmentToCard(action, db),
+    (action: DeleteAttachmentFromCard) =>
+      handleDeleteAttachmentFromCard(action, db)
   )(action)
