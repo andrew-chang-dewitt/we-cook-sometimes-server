@@ -2,7 +2,6 @@
 
 import * as Data from '../schema/data'
 import * as Trello from '../schema/trello'
-import * as Actions from '../lib/handleAction'
 
 interface AttachmentProps {
   id?: string
