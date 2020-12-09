@@ -2,6 +2,7 @@
 
 import * as Data from '../schema/data'
 import * as Trello from '../schema/trello'
+import * as Actions from '../lib/handleAction'
 
 interface AttachmentProps {
   id?: string
@@ -72,7 +73,7 @@ class Card {
       shortLink: 'https://a-link',
       idAttachmentCover: 'img',
       idList: 'list',
-      idLabels: [ 'aTagId', 'anotherTagId' ],
+      idLabels: ['aTagId', 'anotherTagId'],
     }
   }
 
@@ -118,7 +119,7 @@ class RecipeCard {
     return {
       id: 'recipeId',
       name: 'recipeName',
-      tags: [ 'aTagId', 'anotherTagId' ],
+      tags: ['aTagId', 'anotherTagId'],
     } as Data.RecipeCard
   }
 
