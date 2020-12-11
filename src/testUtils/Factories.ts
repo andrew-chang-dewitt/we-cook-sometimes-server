@@ -2,6 +2,7 @@
 
 import * as Data from '../schema/data'
 import * as Trello from '../schema/trello'
+import * as Actions from '../lib/handleAction'
 
 interface AttachmentProps {
   id?: string
@@ -77,10 +78,10 @@ class Card {
   }
 
   static createWithProperties(data: CardProps): Trello.Card {
-    const recipe = Card.create()
+    const defaultValues = Card.create()
 
     return {
-      ...recipe,
+      ...defaultValues,
       ...data,
     }
   }
@@ -123,11 +124,400 @@ class RecipeCard {
   }
 
   static createWithProperties(data: RecipeCardProps): Data.RecipeCard {
-    const recipe = RecipeCard.create()
+    const defaultValues = RecipeCard.create()
 
     return {
-      ...recipe,
+      ...defaultValues,
       ...data,
+    }
+  }
+}
+
+interface RecipeDetailsProps {
+  id?: string
+  desc?: string
+  images?: Array<Data.Image>
+}
+
+class RecipeDetails {
+  static create(): Data.RecipeDetails {
+    return {
+      id: 'recipeId',
+      desc: 'description',
+      images: [],
+    }
+  }
+
+  static createWithProperties(data: RecipeDetailsProps): Data.RecipeDetails {
+    const defaultValues = RecipeDetails.create()
+
+    return {
+      ...defaultValues,
+      ...data,
+    }
+  }
+}
+
+interface ImageProps {
+  id?: string
+  name?: string
+  url?: string
+  edgeColor?: string
+  scaled?: Array<Data.ScaledImage>
+}
+
+class Image {
+  static create(): Data.Image {
+    return {
+      id: 'id',
+      name: 'name',
+      url: 'url',
+      edgeColor: 'color',
+      scaled: [],
+    }
+  }
+
+  static createWithProperties(data: ImageProps): Data.Image {
+    const defaultValues = Image.create()
+
+    return {
+      ...defaultValues,
+      ...data,
+    }
+  }
+}
+
+interface UpdateCardNameProps {
+  id?: string
+  name?: string
+}
+
+class UpdateCardName {
+  static create(): Actions.UpdateCardName {
+    return {
+      type: Actions.ActionType.UpdateCard,
+      display: { translationKey: Actions.UpdateCardType.Name },
+      data: {
+        card: {
+          id: 'id',
+          name: 'name',
+        },
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: UpdateCardNameProps
+  ): Actions.UpdateCardName {
+    const defaultValues = UpdateCardName.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data,
+        },
+      },
+    }
+  }
+}
+
+interface UpdateCardDescProps {
+  id?: string
+  desc?: string
+}
+
+class UpdateCardDesc {
+  static create(): Actions.UpdateCardDesc {
+    return {
+      type: Actions.ActionType.UpdateCard,
+      display: { translationKey: Actions.UpdateCardType.Desc },
+      data: {
+        card: {
+          id: 'id',
+          desc: 'desc',
+        },
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: UpdateCardDescProps
+  ): Actions.UpdateCardDesc {
+    const defaultValues = UpdateCardDesc.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data,
+        },
+      },
+    }
+  }
+}
+
+interface UpdateCardListProps {
+  id?: string
+  idList?: string
+}
+
+class UpdateCardList {
+  static create(): Actions.UpdateCardList {
+    return {
+      type: Actions.ActionType.UpdateCard,
+      display: { translationKey: Actions.UpdateCardType.List },
+      data: {
+        card: {
+          id: 'id',
+          idList: 'list',
+        },
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: UpdateCardListProps
+  ): Actions.UpdateCardList {
+    const defaultValues = UpdateCardList.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data,
+        },
+      },
+    }
+  }
+}
+
+interface RemoveLabelFromCardProps {
+  card?: { id: string }
+  label?: {
+    id?: string
+    name?: string
+  }
+}
+
+class RemoveLabelFromCard {
+  static create(): Actions.RemoveLabelFromCard {
+    return {
+      type: Actions.ActionType.RemoveLabelFromCard,
+      data: {
+        card: {
+          id: 'id',
+        },
+        label: Label.createWithData({ id: 'id', name: 'name' }),
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: RemoveLabelFromCardProps
+  ): Actions.RemoveLabelFromCard {
+    const defaultValues = RemoveLabelFromCard.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data.card,
+        },
+        label: {
+          ...defaultValues.data.label,
+          ...data.label,
+        },
+      },
+    }
+  }
+}
+
+interface AddLabelToCardProps {
+  card?: { id: string }
+  label?: {
+    id?: string
+    name?: string
+  }
+}
+
+class AddLabelToCard {
+  static create(): Actions.AddLabelToCard {
+    return {
+      ...RemoveLabelFromCard.create(),
+      type: Actions.ActionType.AddLabelToCard,
+    }
+  }
+
+  static createWithProperties(
+    data: AddLabelToCardProps
+  ): Actions.AddLabelToCard {
+    const defaultValues = AddLabelToCard.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data.card,
+        },
+        label: {
+          ...defaultValues.data.label,
+          ...data.label,
+        },
+      },
+    }
+  }
+}
+
+interface CreateCardProps {
+  card: {
+    id?: string
+    name?: string
+    shortLink?: string
+  }
+}
+
+class CreateCard {
+  static create(): Actions.CreateCard {
+    return {
+      type: Actions.ActionType.CreateCard,
+      data: {
+        card: {
+          id: 'id',
+          name: 'name',
+          shortLink: 'shortLink',
+        },
+      },
+    }
+  }
+
+  static createWithProperties(data: CreateCardProps): Actions.CreateCard {
+    const defaultValues = CreateCard.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        card: {
+          ...defaultValues.data.card,
+          ...data.card,
+        },
+      },
+    }
+  }
+}
+
+class DeleteCard {
+  static create(): Actions.DeleteCard {
+    return {
+      type: Actions.ActionType.DeleteCard,
+      data: {
+        card: {
+          id: 'id',
+        },
+      },
+    }
+  }
+
+  static createWithId(id: string): Actions.DeleteCard {
+    const defaultValues = DeleteCard.create()
+
+    return {
+      ...defaultValues,
+      data: { card: { id } },
+    }
+  }
+}
+
+interface AddAttachmentToCardProps {
+  card?: { id?: string }
+  attachment?: {
+    id?: string
+    name?: string
+    url?: string
+  }
+}
+
+class AddAttachmentToCard {
+  static create(): Actions.AddAttachmentToCard {
+    return {
+      type: Actions.ActionType.AddAttachmentToCard,
+      data: {
+        card: { id: 'id' },
+        attachment: {
+          id: 'id',
+          name: 'name',
+          url: 'url',
+        },
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: AddAttachmentToCardProps
+  ): Actions.AddAttachmentToCard {
+    const defaultValues = AddAttachmentToCard.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data.card,
+        },
+        attachment: {
+          ...defaultValues.data.attachment,
+          ...data.attachment,
+        },
+      },
+    }
+  }
+}
+
+interface DeleteAttachmentFromCardProps {
+  card?: { id?: string }
+  attachment?: { id?: string }
+}
+
+class DeleteAttachmentFromCard {
+  static create(): Actions.DeleteAttachmentFromCard {
+    return {
+      type: Actions.ActionType.DeleteAttachmentFromCard,
+      data: {
+        card: { id: 'id' },
+        attachment: { id: 'id' },
+      },
+    }
+  }
+
+  static createWithProperties(
+    data: DeleteAttachmentFromCardProps
+  ): Actions.DeleteAttachmentFromCard {
+    const defaultValues = DeleteAttachmentFromCard.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        ...defaultValues.data,
+        card: {
+          ...defaultValues.data.card,
+          ...data.card,
+        },
+        attachment: {
+          ...defaultValues.data.attachment,
+          ...data.attachment,
+        },
+      },
     }
   }
 }
@@ -135,6 +525,17 @@ class RecipeCard {
 export default {
   schema: {
     Trello: { Label, Attachment, Card, CardDetails },
-    Data: { Tag, RecipeCard },
+    Data: { Tag, Image, RecipeCard, RecipeDetails },
+  },
+  handleAction: {
+    UpdateCardName,
+    UpdateCardDesc,
+    UpdateCardList,
+    RemoveLabelFromCard,
+    AddLabelToCard,
+    CreateCard,
+    DeleteCard,
+    AddAttachmentToCard,
+    DeleteAttachmentFromCard,
   },
 }

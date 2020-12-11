@@ -1,21 +1,28 @@
+/* istanbul ignore file */
+
 import {
   Db,
   FindAndModifyWriteOpResultObject,
   InsertOneWriteOpResult,
 } from 'mongodb'
 
-import { Image, RecipeCard, RecipeDetails } from '../schema/data'
+import { RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
 import {
-  buildImage,
-  buildRecipeCard,
-  buildRecipeDetails,
+  actionUpdateCardName,
+  actionUpdateCardDesc,
+  actionUpdateCardList,
+  actionRemoveLabelFromCard,
+  actionAddLabelToCard,
+  actionCreateCard,
+  actionAddAttachmentToCard,
+  actionDeleteAttachmentFromCard,
 } from '../lib/translations'
 import model from './database'
 
 import { ok, err, Result } from '../utils/Result'
 
-enum ActionType {
+export enum ActionType {
   UpdateCard = 'updateCard',
   RemoveLabelFromCard = 'removeLabelFromCard',
   AddLabelToCard = 'addLabelToCard',
@@ -75,7 +82,7 @@ interface ActionBase {
 
 type UpdateCard = UpdateCardName | UpdateCardDesc | UpdateCardList
 
-enum UpdateCardType {
+export enum UpdateCardType {
   Name = 'action_renamed_card',
   Desc = 'action_changed_description_of_card',
   List = 'action_move_card_from_list_to_list',
@@ -85,7 +92,7 @@ interface UpdateCardBase extends ActionBase {
   display: { translationKey: UpdateCardType }
 }
 
-interface UpdateCardName extends UpdateCardBase {
+export interface UpdateCardName extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.Name }
   data: {
@@ -96,7 +103,7 @@ interface UpdateCardName extends UpdateCardBase {
   }
 }
 
-interface UpdateCardDesc extends UpdateCardBase {
+export interface UpdateCardDesc extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.Desc }
   data: {
@@ -107,7 +114,7 @@ interface UpdateCardDesc extends UpdateCardBase {
   }
 }
 
-interface UpdateCardList extends UpdateCardBase {
+export interface UpdateCardList extends UpdateCardBase {
   type: ActionType.UpdateCard
   display: { translationKey: UpdateCardType.List }
   data: {
@@ -136,10 +143,12 @@ const handleUpdateCardName = (
     // then Update that Recipe in DB with new name
     .then((current) => {
       if (current)
-        return model.Recipe(db).update.one(action.data.card.id, {
-          ...current,
-          name: action.data.card.name as string,
-        })
+        return model
+          .Recipe(db)
+          .update.one(
+            action.data.card.id,
+            actionUpdateCardName(current, action)
+          )
       else throw new DocumentNotFoundError()
     })
 
@@ -154,10 +163,12 @@ const handleUpdateCardDesc = (
     // then Update that Detail in DB with new name
     .then((current) => {
       if (current)
-        return model.Detail(db).update.one(action.data.card.id, {
-          ...current,
-          desc: action.data.card.desc as string,
-        })
+        return model
+          .Detail(db)
+          .update.one(
+            action.data.card.id,
+            actionUpdateCardDesc(current, action)
+          )
       else throw new DocumentNotFoundError()
     })
 
@@ -172,10 +183,12 @@ const handleUpdateCardList = (
     // then Update that Recipe in DB w/ new List
     .then((current) => {
       if (current)
-        return model.Recipe(db).update.one(action.data.card.id, {
-          ...current,
-          idList: action.data.card.idList,
-        })
+        return model
+          .Recipe(db)
+          .update.one(
+            action.data.card.id,
+            actionUpdateCardList(current, action)
+          )
       else throw new DocumentNotFoundError()
     })
 
@@ -185,13 +198,17 @@ const handleUpdateCard = (
 ): Promise<FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>> => {
   // determine what changed & if it's RecipeCard or RecipeDetails
   // then defer to handler to make change in appropriate collection on DB
+  //
+  // while this would be better as a switch statement (3+ conditions),
+  // TS doesn't support nested tagged unions yet (see github issue #18758:
+  // https://github.com/microsoft/TypeScript/issues/18758)
   if (isUpdateCardName(action)) return handleUpdateCardName(action, db)
   else if (isUpdateCardDesc(action)) return handleUpdateCardDesc(action, db)
   else if (isUpdateCardList(action)) return handleUpdateCardList(action, db)
   else throw new UnhandledActionError()
 }
 
-interface RemoveLabelFromCard extends ActionBase {
+export interface RemoveLabelFromCard extends ActionBase {
   type: ActionType.RemoveLabelFromCard
   data: {
     card: {
@@ -212,33 +229,19 @@ const handleRemoveLabelFromCard = (
     .then((current) => {
       // then construct a new model without the label being removed
       if (current) {
-        const newTags = current.tags.reduce((remaining, current) => {
-          // spread to clone to avoid side effecting same array between
-          // calls to reduce callback
-          const res = [...remaining]
-
-          // if current label isn't the one being removed
-          current !== action.data.label.id
-            ? // add it to list of remaining labels
-              res.push(current)
-            : // otherwise, don't push it so it won't end up in the
-              // resulting list
-              null
-
-          return res
-        }, [] as Array<string>)
-
         // & update the old model of the Recipe with the newly modified model
-        return model.Recipe(db).update.one(action.data.card.id, {
-          ...current,
-          tags: newTags,
-        })
+        return model
+          .Recipe(db)
+          .update.one(
+            action.data.card.id,
+            actionRemoveLabelFromCard(current, action)
+          )
       }
 
       throw new DocumentNotFoundError()
     })
 
-interface AddLabelToCard extends ActionBase {
+export interface AddLabelToCard extends ActionBase {
   type: ActionType.AddLabelToCard
   data: {
     card: {
@@ -260,15 +263,17 @@ const handleAddLabelToCard = (
     .then((current) => {
       // & update the old model of the Recipe with the newly modified model
       if (current)
-        return model.Recipe(db).update.one(action.data.card.id, {
-          ...current,
-          tags: [...current.tags, action.data.label.id],
-        })
+        return model
+          .Recipe(db)
+          .update.one(
+            action.data.card.id,
+            actionAddLabelToCard(current, action)
+          )
 
       throw new DocumentNotFoundError()
     })
 
-interface CreateCard extends ActionBase {
+export interface CreateCard extends ActionBase {
   type: ActionType.CreateCard
   data: {
     card: {
@@ -282,46 +287,14 @@ interface CreateCard extends ActionBase {
 const handleCreateCard = (
   action: CreateCard,
   db: Db
-): Promise<InsertOneWriteOpResult<any>> => {
-  const { id, name, shortLink } = action.data.card
+): Promise<InsertOneWriteOpResult<any>> =>
   // build a new RecipeCard from Action & push to DB
-  return model
+  model
     .Recipe(db)
-    .create.one(
-      buildRecipeCard(
-        {
-          id,
-          name,
-          shortLink,
-          // when a new card is created, it's sent without any
-          // labels, list, or cover information in the action.
-          // If labels are added using # notation during card
-          // creation, separate Add Label To Card actions are sent,
-          // so they will be added automatically. Similarly, an
-          // action will be sent when a cover is added.
-          // FIXME: idList isn't sent at the beginning, however; so
-          // some way of getting the right list may be necessary
-          idList: '',
-          idLabels: [],
-          idAttachmentCover: null,
-        },
-        null
-      )
-    )
-    .then((_) =>
-      model.Detail(db).create.one(
-        buildRecipeDetails(
-          {
-            id,
-            desc: '',
-          },
-          []
-        )
-      )
-    )
-}
+    .create.one(actionCreateCard.card(action))
+    .then((_) => model.Detail(db).create.one(actionCreateCard.details(action)))
 
-interface DeleteCard extends ActionBase {
+export interface DeleteCard extends ActionBase {
   type: ActionType.DeleteCard
 }
 
@@ -334,7 +307,7 @@ const handleDeleteCard = (
     .deleteDoc.one(action.data.card.id)
     .then((_) => model.Detail(db).deleteDoc.one(action.data.card.id))
 
-interface AddAttachmentToCard extends ActionBase {
+export interface AddAttachmentToCard extends ActionBase {
   type: ActionType.AddAttachmentToCard
   data: {
     attachment: {
@@ -350,8 +323,6 @@ const handleAddAttachmentToCard = (
   action: AddAttachmentToCard,
   db: Db
 ): Promise<FindAndModifyWriteOpResultObject<RecipeDetails>> => {
-  const { id, name, url } = action.data.attachment
-
   // just because an attachment is added to the card, doesn't mean
   // it's published. This function checks for published status in the
   // name, then strips the published indicator before returning the
@@ -367,18 +338,6 @@ const handleAddAttachmentToCard = (
     } else return err(Error('Image not published'))
   }
 
-  const newImage = buildImage({
-    id,
-    url,
-    name: checkPublished(name).unwrap(),
-    // action.data.attachment doesn't include edge color or
-    // previews, for now, just initialize new attachment with empty
-    // values the data can later be filled in during a scheduled
-    // full sync with Trello
-    edgeColor: '',
-    previews: [],
-  })
-
   return (
     // get current Detail by action.data.card.id
     model
@@ -387,19 +346,28 @@ const handleAddAttachmentToCard = (
       // then Update that Detail in DB with new name
       .then((current) => {
         if (current) {
-          const newImages = [...current.images]
-          newImages.push(newImage)
-
-          return model.Detail(db).update.one(action.data.card.id, {
-            ...current,
-            images: newImages,
-          })
+          return model.Detail(db).update.one(
+            action.data.card.id,
+            actionAddAttachmentToCard(current, {
+              ...action,
+              data: {
+                ...action.data,
+                attachment: {
+                  ...action.data.attachment,
+                  // check if attachment is published before translating
+                  // by replacing action.data.attachment.name with Ok
+                  // value returned by checkPublished
+                  name: checkPublished(action.data.attachment.name).unwrap(),
+                },
+              },
+            })
+          )
         } else throw new DocumentNotFoundError()
       })
   )
 }
 
-interface DeleteAttachmentFromCard extends ActionBase {
+export interface DeleteAttachmentFromCard extends ActionBase {
   type: ActionType.DeleteAttachmentFromCard
   data: {
     attachment: {
@@ -418,28 +386,12 @@ const handleDeleteAttachmentFromCard = (
     .read.one(action.data.card.id)
     .then((current) => {
       if (current) {
-        // remove attachment
-        const newImages = current.images.reduce((remaining, current) => {
-          // spread to clone to avoid side effecting same array between
-          // calls to reduce callback
-          const res = [...remaining]
-
-          // if current label isn't the one being removed
-          current.id !== action.data.attachment.id
-            ? // add it to list of remaining labels
-              res.push(current)
-            : // otherwise, don't push it so it won't end up in the
-              // resulting list
-              null
-
-          return res
-        }, [] as Array<Image>)
-
-        // update model
-        return model.Detail(db).update.one(action.data.card.id, {
-          ...current,
-          images: newImages,
-        })
+        return model
+          .Detail(db)
+          .update.one(
+            action.data.card.id,
+            actionDeleteAttachmentFromCard(current, action)
+          )
       } else throw new DocumentNotFoundError()
     })
 
