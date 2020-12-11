@@ -144,7 +144,8 @@ export const recipes = async (): Promise<
   // first, get the cards from Trello
   return (
     trello<Array<Trello.Card>>(
-      board + '/cards?fields=id,name,shortLink,idList,labels,idAttachmentCover'
+      board +
+        '/cards?fields=id,name,shortLink,idList,idLabels,idAttachmentCover'
     )
       // then get a cover image for each card from it's idAttachmentCover property
       .then(

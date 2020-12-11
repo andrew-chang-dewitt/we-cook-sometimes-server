@@ -2,7 +2,7 @@ export interface Label {
   id: string
   idBoard: string
   name: string
-  color: string
+  color: string | null
 }
 
 export interface AttachmentPreview {
@@ -23,7 +23,7 @@ export interface Card {
   id: string
   name: string
   shortLink: string
-  labels: Array<Label>
+  idLabels: Array<string>
   idAttachmentCover: string | null
   idList: string
 }

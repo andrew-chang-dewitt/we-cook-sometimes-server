@@ -2,7 +2,7 @@ export interface Tag {
   id: string
   idBoard: string
   name: string
-  color: string
+  color: string | null
 }
 
 export interface ScaledImage {
@@ -23,7 +23,7 @@ export interface RecipeCard {
   id: string
   name: string
   shortLink: string
-  tags: Array<Tag>
+  tags: Array<string>
   cover: Image | null
   idList: string
 }
