@@ -99,9 +99,34 @@ class Label {
   }
 }
 
+interface TagProps {
+  id?: string
+  name?: string
+  color?: string
+  idBoard?: string
+}
+
 class Tag {
   static createWithData(data: { id: string; name: string }): Data.Tag {
     return data as Data.Tag
+  }
+
+  static create(): Data.Tag {
+    return {
+      id: 'id',
+      name: 'name',
+      color: 'color',
+      idBoard: 'board',
+    }
+  }
+
+  static createWithProperties(data: TagProps): Data.Tag {
+    const defaultValues = Tag.create()
+
+    return {
+      ...defaultValues,
+      ...data,
+    }
   }
 }
 
@@ -522,6 +547,92 @@ class DeleteAttachmentFromCard {
   }
 }
 
+interface CreateLabelProps {
+  label?: {
+    id?: string
+    name?: string
+    color?: string
+  }
+  board?: { id?: string }
+}
+
+class CreateLabel {
+  static create(): Actions.CreateLabel {
+    return {
+      type: Actions.ActionType.CreateLabel,
+      data: {
+        label: {
+          id: 'id',
+          name: 'name',
+          color: 'color',
+        },
+        board: { id: 'board' },
+      },
+    }
+  }
+
+  static createWithProperties(data: CreateLabelProps): Actions.CreateLabel {
+    const defaultValues = CreateLabel.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        label: {
+          ...defaultValues.data.label,
+          ...data.label,
+        },
+        board: {
+          ...defaultValues.data.board,
+          ...data.board,
+        },
+      },
+    }
+  }
+}
+
+interface UpdateLabelProps {
+  label?: {
+    id?: string
+    name?: string
+    color?: string
+  }
+  board?: { id?: string }
+}
+
+class UpdateLabel {
+  static create(): Actions.UpdateLabel {
+    return {
+      type: Actions.ActionType.UpdateLabel,
+      data: {
+        label: {
+          id: 'id',
+          name: 'name',
+          color: 'color',
+        },
+        board: { id: 'board' },
+      },
+    }
+  }
+
+  static createWithProperties(data: UpdateLabelProps): Actions.UpdateLabel {
+    const defaultValues = UpdateLabel.create()
+
+    return {
+      ...defaultValues,
+      data: {
+        label: {
+          ...defaultValues.data.label,
+          ...data.label,
+        },
+        board: {
+          ...defaultValues.data.board,
+          ...data.board,
+        },
+      },
+    }
+  }
+}
+
 export default {
   schema: {
     Trello: { Label, Attachment, Card, CardDetails },
@@ -537,5 +648,7 @@ export default {
     DeleteCard,
     AddAttachmentToCard,
     DeleteAttachmentFromCard,
+    CreateLabel,
+    UpdateLabel,
   },
 }

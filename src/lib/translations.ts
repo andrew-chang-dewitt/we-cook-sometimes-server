@@ -188,3 +188,19 @@ export const actionDeleteAttachmentFromCard = (
     images: newImages,
   }
 }
+
+export const actionCreateLabel = (action: Actions.CreateLabel): Data.Tag =>
+  buildTag({
+    id: action.data.label.id,
+    name: action.data.label.name,
+    color: action.data.label.color ? action.data.label.color : null,
+    idBoard: action.data.board.id,
+  })
+
+export const actionUpdateLabel = (
+  tag: Data.Tag,
+  action: Actions.UpdateLabel
+): Data.Tag => ({
+  ...tag,
+  ...action.data.label,
+})

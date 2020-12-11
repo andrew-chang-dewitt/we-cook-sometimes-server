@@ -18,6 +18,8 @@ import {
   actionCreateCard,
   actionDeleteAttachmentFromCard,
   actionAddAttachmentToCard,
+  actionCreateLabel,
+  actionUpdateLabel,
 } from './translations'
 
 describe('translations', () => {
@@ -273,6 +275,78 @@ describe('translations', () => {
       ).to.satisfy((arr: Array<Data.Image>) =>
         arr.some((el) => el.id === 'new')
       )
+    })
+  })
+
+  describe('actionCreateLabel()', () => {
+    it('builds a new tag from a given action', () => {
+      const action = Factories.handleAction.CreateLabel.createWithProperties({
+        label: {
+          id: 'new label',
+          name: 'name',
+          color: 'color',
+        },
+        board: {
+          id: 'board',
+        },
+      })
+
+      expect(actionCreateLabel(action)).to.deep.equal({
+        id: 'new label',
+        name: 'name',
+        color: 'color',
+        idBoard: 'board',
+      })
+    })
+
+    it('can create a Tag with no color', () => {
+      const action = Factories.handleAction.CreateLabel.createWithProperties({
+        label: {
+          id: 'new label',
+          name: 'name',
+        },
+        board: {
+          id: 'board',
+        },
+      })
+
+      delete action.data.label.color
+
+      expect(actionCreateLabel(action)).to.deep.equal({
+        id: 'new label',
+        name: 'name',
+        color: null,
+        idBoard: 'board',
+      })
+    })
+  })
+
+  describe('actionUpdateLabel()', () => {
+    it('builds a new tag with an updated name from a given action', () => {
+      const old = Factories.schema.Data.Tag.createWithData({
+        id: 'id',
+        name: 'old name',
+      })
+      const action = Factories.handleAction.UpdateLabel.createWithProperties({
+        label: {
+          name: 'new name',
+        },
+      })
+
+      expect(actionUpdateLabel(old, action).name).to.equal('new name')
+    })
+
+    it("can also update a Tag's color", () => {
+      const old = Factories.schema.Data.Tag.createWithProperties({
+        color: 'old',
+      })
+      const action = Factories.handleAction.UpdateLabel.createWithProperties({
+        label: {
+          color: 'new',
+        },
+      })
+
+      expect(actionUpdateLabel(old, action).color).to.equal('new')
     })
   })
 })

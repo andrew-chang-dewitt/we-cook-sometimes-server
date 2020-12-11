@@ -6,7 +6,7 @@ import {
   InsertOneWriteOpResult,
 } from 'mongodb'
 
-import { RecipeCard, RecipeDetails } from '../schema/data'
+import { Tag, RecipeCard, RecipeDetails } from '../schema/data'
 import { Label } from '../schema/trello'
 import {
   actionUpdateCardName,
@@ -17,6 +17,8 @@ import {
   actionCreateCard,
   actionAddAttachmentToCard,
   actionDeleteAttachmentFromCard,
+  actionCreateLabel,
+  actionUpdateLabel,
 } from '../lib/translations'
 import model from './database'
 
@@ -30,6 +32,9 @@ export enum ActionType {
   DeleteCard = 'deleteCard',
   AddAttachmentToCard = 'addAttachmentToCard',
   DeleteAttachmentFromCard = 'deleteAttachmentFromCard',
+  CreateLabel = 'createLabel',
+  DeleteLabel = 'deleteLabel',
+  UpdateLabel = 'updateLabel',
 }
 
 class UnhandledActionError extends Error {}
@@ -43,6 +48,9 @@ type Action =
   | DeleteCard
   | AddAttachmentToCard
   | DeleteAttachmentFromCard
+  | CreateLabel
+  | DeleteLabel
+  | UpdateLabel
 
 const fold = <ReturnType extends any>(
   updateCard: (action: UpdateCard) => ReturnType,
@@ -51,7 +59,10 @@ const fold = <ReturnType extends any>(
   createCard: (action: CreateCard) => ReturnType,
   deleteCard: (action: DeleteCard) => ReturnType,
   addAttachmentToCard: (action: AddAttachmentToCard) => ReturnType,
-  deleteAttachmentFromCard: (action: DeleteAttachmentFromCard) => ReturnType
+  deleteAttachmentFromCard: (action: DeleteAttachmentFromCard) => ReturnType,
+  createLabel: (action: CreateLabel) => ReturnType,
+  deleteLabel: (action: DeleteLabel) => ReturnType,
+  updateLabel: (action: UpdateLabel) => ReturnType
 ) => (action: Action): ReturnType => {
   switch (action.type) {
     case ActionType.UpdateCard:
@@ -68,6 +79,12 @@ const fold = <ReturnType extends any>(
       return addAttachmentToCard(action)
     case ActionType.DeleteAttachmentFromCard:
       return deleteAttachmentFromCard(action)
+    case ActionType.CreateLabel:
+      return createLabel(action)
+    case ActionType.DeleteLabel:
+      return deleteLabel(action)
+    case ActionType.UpdateLabel:
+      return updateLabel(action)
     default:
       throw new UnhandledActionError()
   }
@@ -75,6 +92,9 @@ const fold = <ReturnType extends any>(
 
 interface ActionBase {
   type: ActionType
+}
+
+interface CardBase extends ActionBase {
   data: {
     card: { id: string }
   }
@@ -88,7 +108,7 @@ export enum UpdateCardType {
   List = 'action_move_card_from_list_to_list',
 }
 
-interface UpdateCardBase extends ActionBase {
+interface UpdateCardBase extends CardBase {
   display: { translationKey: UpdateCardType }
 }
 
@@ -208,7 +228,7 @@ const handleUpdateCard = (
   else throw new UnhandledActionError()
 }
 
-export interface RemoveLabelFromCard extends ActionBase {
+export interface RemoveLabelFromCard extends CardBase {
   type: ActionType.RemoveLabelFromCard
   data: {
     card: {
@@ -241,7 +261,7 @@ const handleRemoveLabelFromCard = (
       throw new DocumentNotFoundError()
     })
 
-export interface AddLabelToCard extends ActionBase {
+export interface AddLabelToCard extends CardBase {
   type: ActionType.AddLabelToCard
   data: {
     card: {
@@ -273,7 +293,7 @@ const handleAddLabelToCard = (
       throw new DocumentNotFoundError()
     })
 
-export interface CreateCard extends ActionBase {
+export interface CreateCard extends CardBase {
   type: ActionType.CreateCard
   data: {
     card: {
@@ -294,7 +314,7 @@ const handleCreateCard = (
     .create.one(actionCreateCard.card(action))
     .then((_) => model.Detail(db).create.one(actionCreateCard.details(action)))
 
-export interface DeleteCard extends ActionBase {
+export interface DeleteCard extends CardBase {
   type: ActionType.DeleteCard
 }
 
@@ -307,7 +327,7 @@ const handleDeleteCard = (
     .deleteDoc.one(action.data.card.id)
     .then((_) => model.Detail(db).deleteDoc.one(action.data.card.id))
 
-export interface AddAttachmentToCard extends ActionBase {
+export interface AddAttachmentToCard extends CardBase {
   type: ActionType.AddAttachmentToCard
   data: {
     attachment: {
@@ -367,7 +387,7 @@ const handleAddAttachmentToCard = (
   )
 }
 
-export interface DeleteAttachmentFromCard extends ActionBase {
+export interface DeleteAttachmentFromCard extends CardBase {
   type: ActionType.DeleteAttachmentFromCard
   data: {
     attachment: {
@@ -395,10 +415,69 @@ const handleDeleteAttachmentFromCard = (
       } else throw new DocumentNotFoundError()
     })
 
+export interface CreateLabel extends ActionBase {
+  type: ActionType.CreateLabel
+  data: {
+    label: {
+      id: string
+      name: string
+      color?: string
+    }
+    board: { id: string }
+  }
+}
+
+const handleCreateLabel = (
+  action: CreateLabel,
+  db: Db
+): Promise<InsertOneWriteOpResult<any>> =>
+  // build a new RecipeCard from Action & push to DB
+  model.Tag(db).create.one(actionCreateLabel(action))
+
+export interface DeleteLabel extends ActionBase {
+  type: ActionType.DeleteLabel
+  data: {
+    label: { id: string }
+  }
+}
+
+const handleDeleteLabel = (
+  action: DeleteLabel,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<Tag>> =>
+  model.Tag(db).deleteDoc.one(action.data.label.id)
+
+export interface UpdateLabel extends ActionBase {
+  type: ActionType.UpdateLabel
+  data: {
+    label: {
+      id: string
+      name: string
+      color?: string
+    }
+    board: { id: string }
+  }
+}
+
+const handleUpdateLabel = (
+  action: UpdateLabel,
+  db: Db
+): Promise<FindAndModifyWriteOpResultObject<Tag>> =>
+  model
+    .Tag(db)
+    .read.one(action.data.label.id)
+    .then((current) => {
+      if (current)
+        return model
+          .Tag(db)
+          .update.one(action.data.label.id, actionUpdateLabel(current, action))
+      else throw new DocumentNotFoundError()
+    })
+
 export default (action: Action, db: Db) =>
   fold<
     Promise<
-      | FindAndModifyWriteOpResultObject<RecipeCard | RecipeDetails>
+      | FindAndModifyWriteOpResultObject<Tag | RecipeCard | RecipeDetails>
       | InsertOneWriteOpResult<any>
     >
   >(
@@ -409,5 +488,8 @@ export default (action: Action, db: Db) =>
     (action: DeleteCard) => handleDeleteCard(action, db),
     (action: AddAttachmentToCard) => handleAddAttachmentToCard(action, db),
     (action: DeleteAttachmentFromCard) =>
-      handleDeleteAttachmentFromCard(action, db)
+      handleDeleteAttachmentFromCard(action, db),
+    (action: CreateLabel) => handleCreateLabel(action, db),
+    (action: DeleteLabel) => handleDeleteLabel(action, db),
+    (action: UpdateLabel) => handleUpdateLabel(action, db)
   )(action)

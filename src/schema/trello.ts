@@ -2,7 +2,7 @@ export interface Label {
   id: string
   idBoard: string
   name: string
-  color: string
+  color: string | null
 }
 
 export interface AttachmentPreview {
