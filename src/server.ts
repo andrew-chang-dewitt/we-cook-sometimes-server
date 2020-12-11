@@ -5,8 +5,6 @@ import morgan from 'morgan'
 // import path from 'path'
 
 import model from './lib/database'
-// import { buildTag } from './lib/translations'
-// import { Tag } from './schema/data'
 
 import getRouter from './routes/getRouter'
 import hookRouter from './routes/hookRouter'
