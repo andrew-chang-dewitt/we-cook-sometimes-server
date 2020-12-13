@@ -29,7 +29,7 @@ const connect = (db?: string): Promise<[Db, MongoClient]> =>
       (client) => [client.db(db ? db : dbname), client] as [Db, MongoClient]
     )
 
-enum CollectionName {
+export enum CollectionName {
   Recipes = 'recipes',
   Details = 'details',
   Tags = 'tags',
