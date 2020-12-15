@@ -10,9 +10,6 @@ export const tags = (db: Db) =>
     .then(async (res) => {
       return await model.Tag(db).create.many(res.unwrap())
     })
-    .then((res) => {
-      console.dir(res)
-    })
     .catch(console.error)
 
 export const recipes = (db: Db) =>
@@ -21,7 +18,6 @@ export const recipes = (db: Db) =>
     .then(async (res) => {
       return await model.Recipe(db).create.many(res.unwrap())
     })
-    .then(console.dir)
     .catch(console.error)
 
 export const details = (db: Db) =>
@@ -31,20 +27,28 @@ export const details = (db: Db) =>
     .toArray()
     .then((recipes) => recipes.map((recipe) => recipe.id))
     .then(async (ids) => {
+      const totalNum = ids.length
+
       const recipeDetails: Array<RecipeDetails> = await Promise.all(
         ids.map(
           (id, index) =>
             new Promise<RecipeDetails>((resolve) => {
               setTimeout(async () => {
+                process.stdout.clearLine(0)
+                process.stdout.cursorTo(0)
+                process.stdout.write(
+                  `fetching details: ${index + 1}/${totalNum}`
+                )
+
                 const details = (await fetch.details(id)).unwrap()
-                console.log(`fetching ${id}`)
+
                 resolve(details)
-              }, index * 110)
+              }, index * 120)
             })
         )
       )
 
+      console.log('writing details to database')
       return await model.Detail(db).create.many(recipeDetails)
     })
-    .then(console.dir)
     .catch(console.error)
