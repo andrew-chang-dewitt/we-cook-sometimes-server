@@ -10,6 +10,7 @@
     "coverage": "nyc npm run test",
     "prebuild": "npm run lint && npm run coverage",
     "build": "tsc",
+    "postbuild": "cp package.json dist/package.json && cp package-lock.json dist/package-lock.json && cp .env dist/.env && cd dist && npm i --only=production",
     "prestart": "npm run build",
     "start": "$PORT=3001 node -r dotenv/config .",
     "dev": "tsc-watch -p tsconfig.json --noClear --onSuccess \"node -r dotenv/config .\""
