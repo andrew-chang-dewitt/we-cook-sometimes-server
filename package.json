@@ -1,6 +1,6 @@
 {
   "name": "we-cook-sometimes-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "API server to [we-cook-sometimes](github.com/andrew-chang-dewitt/we-cook-sometimes)",
   "main": "dist/server.js",
   "scripts": {
