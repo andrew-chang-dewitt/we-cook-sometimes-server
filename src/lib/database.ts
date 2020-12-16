@@ -14,7 +14,10 @@ import { RecipeCard, RecipeDetails, Tag } from '../schema/data'
 
 const dbpassword = process.env.DBPASS
 const dbname = 'test'
-export const dburi = (db?: string) => `mongodb+srv://devtest:${dbpassword}@cluster0.2pcqv.mongodb.net/${db ? db : dbname}?retryWrites=true&w=majority`
+export const dburi = (db?: string) =>
+  `mongodb+srv://devtest:${dbpassword}@cluster0.2pcqv.mongodb.net/${
+    db ? db : dbname
+  }?retryWrites=true&w=majority`
 
 const connect = (db?: string): Promise<[Db, MongoClient]> =>
   MongoClient.connect(dburi(), {
