@@ -2,9 +2,11 @@
 
 import express, { ErrorRequestHandler } from 'express'
 import morgan from 'morgan'
+import Agenda from 'agenda'
 // import path from 'path'
 
-import model from './lib/database'
+import model, { dburi } from './lib/database'
+import refresh from './scripts/refresh'
 
 import getRouter from './routes/getRouter'
 import hookRouter from './routes/hookRouter'
@@ -17,10 +19,36 @@ const baseRoute = `/api/${apiVersion}`
 
 let shuttingDown = false
 
+// create a new connection to the Agenda job runner
+const agenda = new Agenda()
+  .database(dburi('jobs'), undefined, { useUnifiedTopology: true })
+  .processEvery('12 hours')
+
 // connect to the database, then start the application
 model
   .connect()
   .then(([db, client]) => {
+    /* * * * * * * * * * * * * * * * *
+     *                               *
+     *         SCHEDULE JOBS         *
+     *                               *
+     * * * * * * * * * * * * * * * * */
+
+    // define job to refresh database
+    agenda.define('refresh database', async () => {
+      await refresh()
+    })
+    // schedule job to run every day at 4 AM
+    agenda.every('24 hours', 'refresh database')
+
+    agenda.start()
+
+    /* * * * * * * * * * * * * * * * *
+     *                               *
+     *        SETUP WEBSERVER        *
+     *                               *
+     * * * * * * * * * * * * * * * * */
+
     /*
      * Middleware
      */
@@ -78,11 +106,19 @@ model
       console.debug(`server started at localhost:${port}`)
     })
 
-    // shuts down the server, triggering graceful exit
-    const shutDownServer = () => {
+    /* * * * * * * * * * * * * * * * *
+     *                               *
+     *      PROCESS MANAGEMENT       *
+     *                               *
+     * * * * * * * * * * * * * * * * */
+
+    // shuts down the server & job runner, triggering graceful exit
+    const shutDownServer = async () => {
       // alert others that the system is shutting down
       shuttingDown = true
 
+      // stop Agenda
+      await agenda.stop()
       // shut down db connection
       client.close()
       // shut down express server
