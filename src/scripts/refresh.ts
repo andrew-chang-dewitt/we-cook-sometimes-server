@@ -8,7 +8,6 @@ import { tags, recipes, details } from './populate'
  */
 
 export const dateSeparator = '_'
-const today = new Date()
 const day = 24 * 60 * 60 * 1000 // 1 day in milliseconds
 
 /*
@@ -33,6 +32,7 @@ interface ExecuteQuery {
 
 const archiveCurrent: ExecuteQuery = async ([db, client]) => {
   // get current date as ISO string to use for renaming current collections
+  const today = new Date()
   const pre = prefix(today)
 
   const rename = (db: Db, name: CollectionName): Promise<Collection<any>> =>
@@ -101,6 +101,7 @@ const archiveCurrent: ExecuteQuery = async ([db, client]) => {
 }
 
 const getNew: ExecuteQuery = async ([db, client]) => {
+  const today = new Date()
   // rebuild using original populate functions
   // awaiting Promises to execute one at a time to avoid
   // hitting Trello API's rate limit
@@ -141,6 +142,7 @@ const getNew: ExecuteQuery = async ([db, client]) => {
 }
 
 const deleteOldArchives: ExecuteQuery = async ([db, client]) => {
+  const today = new Date()
   // clean up archive collections older than 2 days from now
   const limit = new Date(today.getTime() - 2 * day)
   const oldCollections = (await db.listCollections().toArray())
