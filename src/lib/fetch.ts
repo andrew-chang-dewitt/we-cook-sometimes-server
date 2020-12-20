@@ -55,7 +55,7 @@ const trello = <T>(endpoint: string): Promise<Result<T, FetchError>> => {
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 export const tags = (): Promise<Result<Array<Data.Tag>, FetchError>> =>
-  trello<Array<Trello.Label>>(board + '/labels').then((result) =>
+  trello<Array<Trello.Label>>(board + '/labels?limit=1000').then((result) =>
     result.mapOk<Array<Data.Tag>>((labels) =>
       labels.map((label) => buildTag(label))
     )
