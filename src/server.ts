@@ -14,7 +14,7 @@ import hookRouter from './routes/hookRouter'
 const app = express()
 const port = process.env.PORT || 8001
 // FIXME: update this to 1 when on beta, rc, & actual release
-const apiVersion = '1a'
+const apiVersion = '1'
 const baseRoute = `/api/${apiVersion}`
 
 let shuttingDown = false
