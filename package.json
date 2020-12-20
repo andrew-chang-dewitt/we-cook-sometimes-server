@@ -1,18 +1,18 @@
 {
   "name": "we-cook-sometimes-server",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "API server to [we-cook-sometimes](github.com/andrew-chang-dewitt/we-cook-sometimes)",
-  "main": "dist/server.js",
+  "main": "server.js",
   "scripts": {
+    "clean": "rm -rf dist",
     "lint": "prettier --config .prettierrc.yaml --write './(*.html|*.js|*.json|src/**/*.ts)'",
     "test": "TS_NODE_FILES=true mocha 'src/**/*.spec.{ts,tsx}'",
     "test-one": "TS_NODE_FILES=true mocha $MATCH",
     "coverage": "nyc npm run test",
-    "prebuild": "npm run lint && npm run coverage",
+    "prebuild": "npm run clean && npm run lint && npm run coverage",
     "build": "tsc",
     "postbuild": "cp package.json dist/package.json && cp package-lock.json dist/package-lock.json && cp .env dist/.env && cd dist && npm i --only=production",
-    "prestart": "npm run build",
-    "start": "$PORT=3001 node -r dotenv/config .",
+    "start": "PORT=3001 node -r dotenv/config .",
     "dev": "tsc-watch -p tsconfig.json --noClear --onSuccess \"node -r dotenv/config .\""
   },
   "nyc": {
