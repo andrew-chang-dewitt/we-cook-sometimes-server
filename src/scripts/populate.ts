@@ -1,4 +1,5 @@
 import { Db } from 'mongodb'
+import readline from 'readline'
 
 import * as fetch from '../lib/fetch'
 import { RecipeDetails } from '../schema/data'
@@ -34,8 +35,7 @@ export const details = (db: Db) =>
           (id, index) =>
             new Promise<RecipeDetails>((resolve) => {
               setTimeout(async () => {
-                process.stdout.clearLine(0)
-                process.stdout.cursorTo(0)
+                readline.cursorTo(process.stdout, 0)
                 process.stdout.write(
                   `fetching details: ${index + 1}/${totalNum}`
                 )
